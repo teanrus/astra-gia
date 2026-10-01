@@ -11,21 +11,27 @@ echo " "
 echo "================================================================================"
 read -p "Нажмите Enter для начала настройки списка установки..."
 
-# ИСПРАВЛЕНИЕ 1: Автоматическое исправление старых некорректных записей R7-Офис 
-# (заменяет ошибочное кодовое имя 'r7' на правильное 'astralinux' во всех файлах apt)
+# --- БЛОК ПОДГОТОВКИ СИСТЕМЫ (РЕШАЕТ ПРОБЛЕМУ С DVD И СЛОМАННЫМИ ПАКЕТАМИ) ---
+echo "Отключение CD-ROM репозитория (чтобы система не просила вставить диск)..."
+sudo sed -i '/cdrom:/ s/^/#/' /etc/apt/sources.list
+sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \; 2>/dev/null
+
+echo "Проверка и исправление состояния пакетной базы (fix-broken)..."
+sudo apt clean
+sudo apt --fix-broken install -y
+
 echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
 sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
 sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
 
-# ИСПРАВЛЕНИЕ 2: Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей
 if ! grep -q "dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
     echo "Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей..."
     echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
 fi
 
-# Обновление списка пакетов
 echo "Обновление списков пакетов (это может занять некоторое время)..."
 sudo apt update
+# -----------------------------------------------------------------------------
 
 # Массивы для хранения выбора пользователя
 declare -a URLS_TO_DOWNLOAD
@@ -159,9 +165,10 @@ filename="package_${i}.deb"
 fi
 wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$PWD/tmp_deb/$filename" -q --show-progress
 done
-echo "Переход в директорию с пакетами и установка..."
+echo "Переход в директорию с пакетами и установка (с автоматической подгрузкой зависимостей)..."
 cd "$PWD/tmp_deb/" || exit 1
-sudo apt -y install ./*.deb
+# Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
+sudo apt -f -y install ./*.deb
 echo "Очистка временных файлов..."
 cd ../ || exit 1
 rm -rf "$PWD/tmp_deb/"
@@ -190,7 +197,6 @@ fi
 if [ "$INSTALL_MAX_REPO" == "1" ]; then
 echo "Настройка репозитория и установка MAX..."
 sudo mkdir -p /etc/apt/keyrings
-# ИСПРАВЛЕНО: добавлен флаг --yes для предотвращения интерактивного запроса при перезаписи
 curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/max.list
 sudo apt update
