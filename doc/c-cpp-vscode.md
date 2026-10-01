@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-C_and_C%2B%2B-00599C?style=for-the-badge) ![IDE](https://img.shields.io/badge/IDE-VS_Code-007ACC?style=for-the-badge) ![Compiler](https://img.shields.io/badge/Compiler-GCC-555555?style=for-the-badge)
+
 # Настройка среды разработки VS Code для работы и запуска проектов на языках C/C++
 
 ***

@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-Python_3-3776AB?style=for-the-badge) ![IDE](https://img.shields.io/badge/IDE-VS_Code-007ACC?style=for-the-badge)
+
 # Настройка среды разработки VS Code для работы и запуска проектов на языке Python3
 
 ***

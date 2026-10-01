@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Content](https://img.shields.io/badge/Content-Shell_Scripts-4EAA25?style=for-the-badge) ![Purpose](https://img.shields.io/badge/Purpose-Automation-2E8B57?style=for-the-badge)
+
 # Скрипты проекта Astra GIA
 
 Этот каталог содержит сценарии автоматизации и вспомогательные инструкции по подготовке рабочих мест для экзаменов в Astra Linux.
@@ -37,6 +40,8 @@
 ### repository-activation.sh
 
 Скрипт для активации репозиториев Astra Linux 1.8 и подготовки среды к установке стороннего программного обеспечения и зависимостей.
+
+Инструкции по подключению репозиториев и обновлению системы, в том числе вручную: [репозитории и установка ПО](../doc/repo-update-install.md).
 
 ## Рекомендуемый порядок работы
 

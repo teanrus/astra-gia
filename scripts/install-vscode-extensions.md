@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![IDE](https://img.shields.io/badge/IDE-VS_Code-007ACC?style=for-the-badge) ![Content](https://img.shields.io/badge/Content-Extensions-6B7280?style=for-the-badge) ![Source](https://img.shields.io/badge/Source-GitHub_Releases-181717?style=for-the-badge)
+
 # Установка расширений VS Code из релиза Astra GIA
 
 Скрипт автоматически скачивает архив с расширениями из релиза проекта Astra GIA и распаковывает его в каталог `~/.vscode/` текущего пользователя.

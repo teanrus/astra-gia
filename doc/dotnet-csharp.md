@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-C%23-239120?style=for-the-badge) ![Runtime](https://img.shields.io/badge/Runtime-.NET-512BD4?style=for-the-badge)
+
 # Установка и настройка dotnet для работы с `C#`
 
 ***

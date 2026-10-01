@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Network](https://img.shields.io/badge/Network-ESPD-007EC6?style=for-the-badge) ![Configuration](https://img.shields.io/badge/Configuration-Proxy-4C9F70?style=for-the-badge)
+
 # Настройка сети интернет через ЕСПД
 
 ***

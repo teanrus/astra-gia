@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![IDE](https://img.shields.io/badge/IDE-VS_Code-007ACC?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Extensions-6B7280?style=for-the-badge) ![Install](https://img.shields.io/badge/Install-Manual-2E8B57?style=for-the-badge)
+
 # Установка расширений в VS Code самостоятельно без Менеджера плагинов
 
 ***

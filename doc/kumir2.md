@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-Kumir_2-007ACC?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Programming_Education-2E8B57?style=for-the-badge)
+
 # Алгоритмический язык Кумир 2
 
 ***

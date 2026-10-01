@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-Pascal-B0A0D0?style=for-the-badge) ![IDE](https://img.shields.io/badge/IDE-PascalABC-00599C?style=for-the-badge) ![IDE](https://img.shields.io/badge/IDE-Lazarus-444444?style=for-the-badge)
+
 # Инструменты разработки на языке Pascal
 
 ***

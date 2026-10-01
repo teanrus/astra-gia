@@ -1,12 +1,17 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Purpose](https://img.shields.io/badge/Purpose-GIA-2E8B57?style=for-the-badge)
+
 # Astra GIA
 
-Набор инструментов и документов для подготовки рабочих мест на Astra Linux Special Edition 1.8 под проведение ГИА (ЕГЭ, ОГЭ, экзамены по информатике и смежным предметам).
+Набор скриптов и инструкций для подготовки рабочих мест на Astra Linux Special Edition 1.8 к проведению ГИА (ЕГЭ, ОГЭ, экзамены по информатике и смежным предметам).
 
 ## Что входит в репозиторий
 
 - Скрипты автоматизации установки программного обеспечения и настройки окружения.
-- Документы по разметке диска и подготовке системы под экзаменационную нагрузку.
-- Руководства и инструкции для администраторов и преподавателей.
+- Инструкции по настройке ОС, сетевых подключений, программирования и учебных приложений.
+- Руководства для администраторов и преподавателей по подготовке и обслуживанию рабочих мест.
+
+Полный каталог материалов: [документация проекта](doc/README.md).
 
 ## Основные сценарии
 
@@ -37,6 +42,8 @@
 
 Подробнее: `scripts/install-vscode-extensions.md`
 
+Для ручной установки расширений без скрипта см. [отдельную инструкцию](doc/vscode-extentions-manual.md).
+
 ### 3. Активация репозиториев
 
 Скрипт: `scripts/repository-activation.sh`
@@ -51,6 +58,32 @@
 Документ: `doc/disk-layout.md`
 
 Содержит описание рекомендованной схемы разделов для Astra Linux, включая `/`, `/var`, `/tmp`, `/home`, `swap` и загрузочные разделы.
+
+## Документация
+
+### Подготовка и обслуживание Astra Linux
+
+- [Разметка диска](doc/disk-layout.md)
+- [Подключение репозиториев, обновление ОС и установка программ](doc/repo-update-install.md)
+- [Настройка сети через ЕСПД](doc/espd.md)
+
+### Языки программирования и учебные среды
+
+- [1С:Элемент](doc/1c-element-language.md)
+- [Basic 256](doc/basic256.md)
+- [C и C++ в VS Code](doc/c-cpp-vscode.md)
+- [C# и .NET](doc/dotnet-csharp.md)
+- [Java](doc/java.md)
+- [КуМир 2](doc/kumir2.md)
+- [Pascal](doc/pascal.md)
+- [Python в VS Code](doc/python.md)
+
+### Приложения и дополнительные настройки
+
+- [КриптоПро и порталы Госуслуг](doc/cryptopro-gos.md)
+- [LibreOffice Base](doc/libreoffice-base.md)
+- [Установка расширений VS Code вручную](doc/vscode-extentions-manual.md)
+- [Яндекс Диск](doc/yandex-disk.md)
 
 ## Быстрый старт
 

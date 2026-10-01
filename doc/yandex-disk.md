@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Application](https://img.shields.io/badge/Application-Yandex_Disk-FF0000?style=for-the-badge) ![Interface](https://img.shields.io/badge/Interface-CLI-555555?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)
+
 # Инструкция по установке и настройке десктопного клиента Яндекс Диск
 
 ***

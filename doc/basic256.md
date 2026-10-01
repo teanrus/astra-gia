@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-BASIC-007ACC?style=for-the-badge) ![IDE](https://img.shields.io/badge/IDE-Basic_256-F9A825?style=for-the-badge)
+
 # Инструменты разработки на языке Basic
 
 ***

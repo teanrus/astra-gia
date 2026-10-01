@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Automation](https://img.shields.io/badge/Automation-Bash-4EAA25?style=for-the-badge) ![Purpose](https://img.shields.io/badge/Purpose-GIA-2E8B57?style=for-the-badge)
+
 # 🎓 Автоматизация установки ПО для ГИА на Astra Linux SE 1.8
 
 Интерактивный bash-скрипт для быстрого и автоматизированного развертывания программного обеспечения, необходимого для проведения Государственной Итоговой Аттестации (ЕГЭ, ОГЭ по информатике и другим предметам) в операционной системе **Astra Linux Special Edition 1.8**.

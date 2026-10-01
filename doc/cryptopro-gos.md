@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Software](https://img.shields.io/badge/Software-CryptoPro_CSP_5-0066CC?style=for-the-badge) ![Plugin](https://img.shields.io/badge/Plugin-CAdES-2E8B57?style=for-the-badge) ![Browser](https://img.shields.io/badge/Browser-Chromium_GOST-4285F4?style=for-the-badge)
+
 # Установка КриптПРО 5 и плагинов для работы с ГОС порталами
 
 **Уставнока и проверка выполнялись на сертифицированной версии криптопровайдера 5.0.13000**

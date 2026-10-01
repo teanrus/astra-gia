@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Application](https://img.shields.io/badge/Application-LibreOffice-18A303?style=for-the-badge) ![Database](https://img.shields.io/badge/Database-HSQLDB-4479A1?style=for-the-badge)
+
 # Настройка LibreOffice Base для работы со встроенной базой данных
 
 ***

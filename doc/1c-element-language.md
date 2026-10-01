@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-1C_Element-8A2BE2?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Programming-2E8B57?style=for-the-badge)
+
 # Язык «1С:Элемент»
 
 ***

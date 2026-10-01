@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Packages](https://img.shields.io/badge/Packages-APT-A42E2B?style=for-the-badge) ![Repositories](https://img.shields.io/badge/Repositories-Stable_and_Frozen-6B7280?style=for-the-badge)
+
 # Подключение сетевых интернет репозиториев, обновление ОС и пакетная установка дополнительного программного обеспечения
 
 ***

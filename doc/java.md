@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-Java-ED8B00?style=for-the-badge) ![JDK](https://img.shields.io/badge/JDK-OpenJDK_17-437291?style=for-the-badge)
+
 # Инструменты разработки и среды для языка Java
 
 ***
