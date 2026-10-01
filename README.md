@@ -1,6 +1,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Purpose](https://img.shields.io/badge/Purpose-GIA-2E8B57?style=for-the-badge)
 
+![Logo](assets/computer-lab.png)
+
 # Astra GIA
 
 Набор скриптов и инструкций для подготовки рабочих мест на Astra Linux Special Edition 1.8 к проведению ГИА (ЕГЭ, ОГЭ, экзамены по информатике и смежным предметам).
