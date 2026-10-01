@@ -86,13 +86,6 @@ wget https://raw.githubusercontent.com/teanrus/astra-gia/main/scripts/auto-insta
 bash auto-install.sh
 ```
 
-Пример запуска через Git Bash в Windows:
-
-```bash
-cd /g/GitHub/astra-gia/scripts
-./auto-install.sh
-```
-
 #### CLI-режим
 
 ```bash
