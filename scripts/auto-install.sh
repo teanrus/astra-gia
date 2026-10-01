@@ -11,13 +11,20 @@ echo " "
 echo "================================================================================"
 read -p "Нажмите Enter для начала настройки списка установки..."
 
-# ДОБАВЛЕНО: Проверка и добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей
+# ИСПРАВЛЕНИЕ 1: Автоматическое исправление старых некорректных записей R7-Офис 
+# (заменяет ошибочное кодовое имя 'r7' на правильное 'astralinux' во всех файлах apt)
+echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
+sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
+sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
+
+# ИСПРАВЛЕНИЕ 2: Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей
 if ! grep -q "dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
     echo "Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей..."
     echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
 fi
 
 # Обновление списка пакетов
+echo "Обновление списков пакетов (это может занять некоторое время)..."
 sudo apt update
 
 # Массивы для хранения выбора пользователя
@@ -173,7 +180,7 @@ login desktop
 password gyxiLab84FByn7sCTd5JY
 EOF
 sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
-# ИСПРАВЛЕНО: заменено 'r7 main' на 'astralinux main'
+# Правильная строка репозитория с кодовым именем 'astralinux'
 echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
 sudo apt update
 sudo apt install -y r7-office
@@ -183,7 +190,7 @@ fi
 if [ "$INSTALL_MAX_REPO" == "1" ]; then
 echo "Настройка репозитория и установка MAX..."
 sudo mkdir -p /etc/apt/keyrings
-# ИСПРАВЛЕНО: добавлен флаг --yes для предотвращения интерактивного запроса
+# ИСПРАВЛЕНО: добавлен флаг --yes для предотвращения интерактивного запроса при перезаписи
 curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/max.list
 sudo apt update
