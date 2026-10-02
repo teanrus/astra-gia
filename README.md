@@ -121,7 +121,11 @@ cd scripts
 
 Проект распространяется по лицензии MIT. Подробности см. в [LICENSE](LICENSE).
 
+## Благодарности
+
+Особая благодарность за предоставление части инструкций Денису Давыдову [ddavydov@astralinux.ru](mailto:ddavydov@astralinux.ru)
+
 ## Контакты
 
-- Редактура и сопровождение: Тян Руслан
+- Редактура и сопровождение: Руслан Тян
 - Email: [tyanrv@lbt.yanao.ru](mailto:tyanrv@lbt.yanao.ru)
