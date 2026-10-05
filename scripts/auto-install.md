@@ -1,5 +1,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Automation](https://img.shields.io/badge/Automation-Bash-4EAA25?style=for-the-badge) ![Purpose](https://img.shields.io/badge/Purpose-GIA-2E8B57?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)
+![Topic](https://img.shields.io/badge/Topic-Disk_Partitioning-6B7280?style=for-the-badge)
+![Storage](https://img.shields.io/badge/Storage-SSD-555555?style=for-the-badge)
 
 # 🎓 Автоматизация установки ПО для ГИА на Astra Linux SE 1.8
 
