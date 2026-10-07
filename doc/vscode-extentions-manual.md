@@ -12,8 +12,22 @@
 - Скачайте и установите пакет среды из Библиотеки приложений потрала: [code.deb](https://easyastra.ru/store1.8/code.deb)
 - Запустите среду один раз в сессии требуемого пользователя и сразу закройте
 - Скачайте архив с расширениями: [extensions.tar.gz](https://easyastra.ru/resources/EGE/extensions.tar.gz)
-- Распакуйте скачанный архив
-- Скопируйте распакованный каталог `extensions/` в скрытый каталог `$HOME/.vscode/` Домашнего каталог пользователя с заменой содержимого или в Терминале, выполнив команду `cp -r /path/to/extensions/ ~/.vscode/`
+
+```bash
+wget https://easyastra.ru/resources/EGE/extensions.tar.gz
+```
+
+Распакуйте скачанный архив
+
+```bash
+tar -xzvf extensions.tar.gz
+```
+
+Скопируйте распакованный каталог `extensions/` в скрытый каталог `$HOME/.vscode/` Домашнего каталог пользователя с заменой содержимого или в Терминале, выполнив команду `cp -r /path/to/extensions/ ~/.vscode/`
+
+```bash
+sudo cp -r ~/Загрузки/scripts/extensions/ /home/std/.vscode/
+```
 
 > Для отображения скрытых каталогов в Домашнем каталоге пользователя нажмите комбинацию клавиш `Ctrl+H`
 
