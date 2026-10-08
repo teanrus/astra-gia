@@ -36,7 +36,7 @@
 | Visual Studio Code | 1.140.0 | Текстовый редактор, разработанный Microsoft. Позиционируется, как «лёгкий» редактор кода для кроссплатформенной разработки | [code.visualstudio.com](https://code.visualstudio.com/) |  |
 | Eclipse IDE for C/C++ Developers | 2026.09 | Среда разработки Eclipse для работы с проектами на C и C++ | [eclipse.org](https://www.eclipse.org/) |  |
 | Eclipse IDE for Java Developers | 2026.09 | Среда разработки Eclipse для работы с проектами на Java | [eclipse.org](https://www.eclipse.org/) |  |
-| Notepad++ | 8.9.8.1 | Свободный текстовый редактор с открытым исходным кодом для Windows с подсветкой синтаксиса, разметки и прочего | [notepad-plus-plus.org](https://notepad-plus-plus.org/) |  |
+| Notepad++ | 8.9.8.1 | Свободный текстовый редактор с открытым исходным кодом с подсветкой синтаксиса, разметки и прочего | [notepad-plus-plus.org](https://notepad-plus-plus.org/) |  |
 | PascalABC.NET | 4.0.1 | Язык программирования Паскаль, включающий классический Паскаль, большинство возможностей языка Delphi | [pascalabc.net](https://pascalabc.net/) |  |
 | КуМир 2 | 2.1.0 (rc11) | Язык и система программирования, предназначенная для поддержки начальных курсов информатики | [niisi.ru/kumir](https://niisi.ru/kumir/) |  |
 | Basic 256 | 2.0.99.10 | Открытая реализация языка программирования basic и среда разработки под него | [basic256.org](https://basic256.org/) |  |
