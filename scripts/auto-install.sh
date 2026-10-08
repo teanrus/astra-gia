@@ -48,7 +48,10 @@ print_package_list() {
 
 [programming]
   - Code::Blocks
+  - Eclipse IDE for C/C++ Developers 2026.09
+  - Eclipse IDE for Java Developers 2026.09
   - IDLE 3 (Python 3.11)
+  - Notepad++ 8.9.8.1
   - PascalABC.NET
   - PyCharm
   - Visual Studio Code
@@ -350,7 +353,10 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 ;;
             programming)
                 add_group_package "Code::Blocks" "https://easyastra.ru/store1.8/codeblocks.deb"
+                add_group_package "Eclipse IDE for C/C++ Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-cpp.deb"
+                add_group_package "Eclipse IDE for Java Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-java.deb"
                 add_group_package "IDLE 3 (Python 3.11)" "https://easyastra.ru/store1.8/idle-python3.11.deb"
+                add_group_package "Notepad++ 8.9.8.1" "https://easyastra.ru/store1.8/notepadplus.deb"
                 add_group_package "PascalABC.NET" "https://easyastra.ru/store1.8/pascalABC.deb"
                 add_group_package "PyCharm" "https://easyastra.ru/store1.8/pycharm.deb"
                 add_group_package "Visual Studio Code" "https://easyastra.ru/store1.8/code.deb"
@@ -402,7 +408,10 @@ else
     ask_deb "КуМир 2" "https://easyastra.ru/store1.8/kumir2.deb"
     ask_deb "Basic 256" "https://easyastra.ru/store1.8/basic256.deb"
     ask_deb "Code::Blocks" "https://easyastra.ru/store1.8/codeblocks.deb"
+    ask_deb "Eclipse IDE for C/C++ Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-cpp.deb"
+    ask_deb "Eclipse IDE for Java Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-java.deb"
     ask_deb "IDLE 3 (Python 3.11)" "https://easyastra.ru/store1.8/idle-python3.11.deb"
+    ask_deb "Notepad++ 8.9.8.1" "https://easyastra.ru/store1.8/notepadplus.deb"
     ask_deb "PascalABC.NET" "https://easyastra.ru/store1.8/pascalABC.deb"
     ask_deb "PyCharm" "https://easyastra.ru/store1.8/pycharm.deb"
     ask_deb "Visual Studio Code" "https://easyastra.ru/store1.8/code.deb"
