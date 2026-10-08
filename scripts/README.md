@@ -26,6 +26,19 @@
 
 Подробности: [auto-install.md](./auto-install.md)
 
+#### Состав наборов в CLI-режиме
+
+При запуске с флагами категории устанавливаются автоматически, без отдельных вопросов по каждому приложению:
+
+- `--office`: Foxit PDF Reader, NAPS2, OnlyOffice Desktop Editors, Сервис Среда.
+- `--internet`: ВК Мессенджер, Яндекс Браузер.
+- `--programming`: Code::Blocks, Eclipse IDE for C/C++ Developers, Eclipse IDE for Java Developers, IDLE 3 (Python 3.11), Notepad++, PascalABC.NET, PyCharm, Visual Studio Code, Python 3.12.13.
+- `--graphics`: GIMP 3, InkScape, Scribus, Audacity, OBS Studio, VLC.
+- `--edu`: КуМир 2, Basic 256, Code::Blocks, Eclipse IDE for Java Developers, IDLE 3 (Python 3.11), Notepad++, PascalABC.NET, PyCharm, Python 3.12.13, Visual Studio Code, R7 Office (`.deb`), Foxit PDF Reader.
+- `--all`: объединяет наборы `--office`, `--internet`, `--programming`, `--graphics` и `--edu`. Повторяющиеся пакеты добавляются в очередь только один раз.
+
+В CLI-режиме Python устанавливается в версии 3.12.13. Eclipse для C/C++ входит в `--programming`, но не в `--edu`. Пакет MAX и установка R7 Office через официальный репозиторий этими категориями не выбираются.
+
 ### install-vscode-extensions.sh
 
 Скрипт для автоматической загрузки архива с расширениями VS Code из GitHub Releases и копирования их в `~/.vscode/`.
