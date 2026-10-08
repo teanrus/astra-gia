@@ -68,6 +68,16 @@ print_package_list() {
 [edu]
   - КуМир 2
   - Basic 256
+  - Code::Blocks
+  - Eclipse IDE for Java Developers 2026.09
+  - IDLE 3 (Python 3.11)
+  - Notepad++ 8.9.8.1
+  - PascalABC.NET
+  - PyCharm
+  - Python 3.12.13
+  - Visual Studio Code
+  - R7 Office
+  - Foxit PDF Reader
 
 [extra]
   - R7 Office
@@ -204,7 +214,7 @@ fi
 
 # --- БЛОК ПОДГОТОВКИ СИСТЕМЫ (РЕШАЕТ ПРОБЛЕМУ С DVD И СЛОМАННЫМИ ПАКЕТАМИ) ---
 if [[ $DRY_RUN -eq 1 ]]; then
-    echo "DRY-RUN: пропускаем отключение CD-ROM и подготовку apt-репозиториев."
+    echo "DRY-RUN: пропускаем отключение CD-ROM, подготовку apt-репозиториев, установку SANE и обновление системы."
 else
     echo "Отключение CD-ROM репозитория (чтобы система не просила вставить диск)..."
     sudo sed -i '/cdrom:/ s/^/#/' /etc/apt/sources.list
@@ -225,6 +235,35 @@ else
 
     echo "Обновление списков пакетов (это может занять некоторое время)..."
     sudo apt update
+
+    echo "Установка подсистемы сканирования SANE..."
+    if ! sudo apt install -y sane sane-utils; then
+        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
+        exit 1
+    fi
+
+    if [[ $AUTO_MODE -eq 0 ]]; then
+        read -r -p "Выполнить обновление системы и очистку пакетов (dist-upgrade, autoremove, autoclean)? (y/n): " upgrade_ans
+        if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
+            echo "Обновление системы..."
+            if ! sudo apt dist-upgrade -y; then
+                echo "Ошибка: не удалось выполнить dist-upgrade." >&2
+                exit 1
+            fi
+            echo "Удаление неиспользуемых пакетов..."
+            if ! sudo apt autoremove -y; then
+                echo "Ошибка: не удалось выполнить autoremove." >&2
+                exit 1
+            fi
+            echo "Очистка локального кэша пакетов..."
+            if ! sudo apt autoclean; then
+                echo "Ошибка: не удалось выполнить autoclean." >&2
+                exit 1
+            fi
+        else
+            echo "Обновление и очистка пакетов пропущены."
+        fi
+    fi
 fi
 # -----------------------------------------------------------------------------
 
@@ -237,6 +276,12 @@ INSTALL_MAX_REPO=${INSTALL_MAX_REPO:-0}
 add_group_package() {
     local name="$1"
     local url="$2"
+    local existing_url
+    for existing_url in "${URLS_TO_DOWNLOAD[@]}"; do
+        if [[ "$existing_url" == "$url" ]]; then
+            return
+        fi
+    done
     URLS_TO_DOWNLOAD+=("$url")
     NAMES_TO_DOWNLOAD+=("$name")
 }
@@ -254,8 +299,7 @@ add_group_duplicate() {
 add_group_python() {
     local name="$1"
     local url="$2"
-    URLS_TO_DOWNLOAD+=("$url")
-    NAMES_TO_DOWNLOAD+=("$name")
+    add_group_package "$name" "$url"
 }
 
 # Функция для обычного .deb пакета
@@ -373,6 +417,16 @@ if [[ $AUTO_MODE -eq 1 ]]; then
             edu)
                 add_group_package "КуМир 2" "https://easyastra.ru/store1.8/kumir2.deb"
                 add_group_package "Basic 256" "https://easyastra.ru/store1.8/basic256.deb"
+                add_group_package "Code::Blocks" "https://easyastra.ru/store1.8/codeblocks.deb"
+                add_group_package "Eclipse IDE for Java Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-java.deb"
+                add_group_package "IDLE 3 (Python 3.11)" "https://easyastra.ru/store1.8/idle-python3.11.deb"
+                add_group_package "Notepad++ 8.9.8.1" "https://easyastra.ru/store1.8/notepadplus.deb"
+                add_group_package "PascalABC.NET" "https://easyastra.ru/store1.8/pascalABC.deb"
+                add_group_package "PyCharm" "https://easyastra.ru/store1.8/pycharm.deb"
+                add_group_python "Python 3.12.13" "https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+                add_group_package "Visual Studio Code" "https://easyastra.ru/store1.8/code.deb"
+                add_group_package "R7 Office" "https://easyastra.ru/store1.8/r7-office.deb"
+                add_group_package "Foxit PDF Reader" "https://easyastra.ru/store1.8/foxitreader.deb"
                 ;;
             all)
                 process_group_selection office
