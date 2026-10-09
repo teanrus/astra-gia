@@ -18,6 +18,7 @@ usage() {
   --education-only           Только обучение/ЕГЭ/ОГЭ инструменты
   --dry-run                  Показать что будет установлено без реальной установки
   --list                     Показать список доступных пакетов и категорий
+  --save-log                 Сохранить вывод скрипта в файл с временной меткой
   --r7-office                Установить R7 Office через репозиторий
   --max                      Установить MAX через репозиторий
   -h, --help                 Показать эту справку
@@ -89,6 +90,7 @@ REPO_BRANCH=""
 AUTO_MODE=0
 LIST_ONLY=0
 DRY_RUN=0
+SAVE_LOG=0
 INSTALL_GROUPS=()
 
 while [[ $# -gt 0 ]]; do
@@ -125,6 +127,10 @@ while [[ $# -gt 0 ]]; do
             LIST_ONLY=1
             shift
             ;;
+        --save-log)
+            SAVE_LOG=1
+            shift
+            ;;
         --r7-office)
             INSTALL_R7_REPO=1
             shift
@@ -152,6 +158,23 @@ fi
 
 if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
     AUTO_MODE=1
+fi
+
+if [[ $SAVE_LOG -eq 0 && -t 0 ]]; then
+    read -r -p "Сохранить лог работы скрипта? (y/n): " save_log_ans
+    if [[ "$save_log_ans" =~ ^[YyДд]$ ]]; then
+        SAVE_LOG=1
+    fi
+fi
+
+if [[ $SAVE_LOG -eq 1 ]]; then
+    LOG_FILE="$PWD/auto-install-$(date +%Y%m%d-%H%M%S).log"
+    if ! touch "$LOG_FILE"; then
+        echo "Ошибка: не удалось создать файл лога: $LOG_FILE" >&2
+        exit 1
+    fi
+    exec > >(tee -a "$LOG_FILE") 2>&1
+    echo "Лог работы сохраняется в: $LOG_FILE"
 fi
 
 echo "==============================================================================="
@@ -270,13 +293,80 @@ fi
 # Массивы для хранения выбора пользователя
 declare -a URLS_TO_DOWNLOAD
 declare -a NAMES_TO_DOWNLOAD
+declare -A PACKAGE_NAMES=(
+    [foxit]="Foxit PDF Reader"
+    [naps2]="NAPS2"
+    [onlyoffice]="OnlyOffice Desktop Editors"
+    [sreda]="Сервис Среда"
+    [vkmessenger]="ВК Мессенджер"
+    [yandex]="Яндекс Браузер"
+    [codeblocks]="Code::Blocks"
+    [eclipse-cpp]="Eclipse IDE for C/C++ Developers 2026.09"
+    [eclipse-java]="Eclipse IDE for Java Developers 2026.09"
+    [idle]="IDLE 3 (Python 3.11)"
+    [notepadplus]="Notepad++ 8.9.8.1"
+    [pascalabc]="PascalABC.NET"
+    [pycharm]="PyCharm"
+    [vscode]="Visual Studio Code"
+    [python-3.9]="Python 3.9.25"
+    [python-3.10]="Python 3.10.20"
+    [python-3.12]="Python 3.12.13"
+    [python-3.13]="Python 3.13.15"
+    [python-3.14]="Python 3.14.7"
+    [gimp]="GIMP 3"
+    [inkscape]="InkScape"
+    [scribus]="Scribus"
+    [audacity]="Audacity"
+    [obs]="OBS Studio"
+    [vlc]="VLC"
+    [kumir]="КуМир 2"
+    [basic256]="Basic 256"
+    [r7-office]="R7 Office"
+    [max]="MAX"
+)
+declare -A PACKAGE_URLS=(
+    [foxit]="https://easyastra.ru/store1.8/foxitreader.deb"
+    [naps2]="https://easyastra.ru/store1.8/naps2.deb"
+    [onlyoffice]="https://easyastra.ru/store1.8/onlyoffice-desktopeditors.deb"
+    [sreda]="https://easyastra.ru/store1.8/sreda.deb"
+    [vkmessenger]="https://easyastra.ru/store1.8/vkmessenger.deb"
+    [yandex]="https://easyastra.ru/store1.8/Yandex.deb"
+    [codeblocks]="https://easyastra.ru/store1.8/codeblocks.deb"
+    [eclipse-cpp]="https://easyastra.ru/store1.8/eclipse-cpp.deb"
+    [eclipse-java]="https://easyastra.ru/store1.8/eclipse-java.deb"
+    [idle]="https://easyastra.ru/store1.8/idle-python3.11.deb"
+    [notepadplus]="https://easyastra.ru/store1.8/notepadplus.deb"
+    [pascalabc]="https://easyastra.ru/store1.8/pascalABC.deb"
+    [pycharm]="https://easyastra.ru/store1.8/pycharm.deb"
+    [vscode]="https://easyastra.ru/store1.8/code.deb"
+    [python-3.9]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.9.25-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+    [python-3.10]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.10.20-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+    [python-3.12]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+    [python-3.13]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.13.15-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+    [python-3.14]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.14.7-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+    [gimp]="https://easyastra.ru/store1.8/gimp3.deb"
+    [inkscape]="https://easyastra.ru/store1.8/inkscape.deb"
+    [scribus]="https://easyastra.ru/store1.8/scribus.deb"
+    [audacity]="https://easyastra.ru/store1.8/audacity.deb"
+    [obs]="https://easyastra.ru/store1.8/obs-studio.deb"
+    [vlc]="https://easyastra.ru/store1.8/vlc.deb"
+    [kumir]="https://easyastra.ru/store1.8/kumir2.deb"
+    [basic256]="https://easyastra.ru/store1.8/basic256.deb"
+    [r7-office]="https://easyastra.ru/store1.8/r7-office.deb"
+    [max]="https://easyastra.ru/store1.8/max.deb"
+)
 INSTALL_R7_REPO=${INSTALL_R7_REPO:-0}
 INSTALL_MAX_REPO=${INSTALL_MAX_REPO:-0}
 
 add_group_package() {
-    local name="$1"
-    local url="$2"
+    local package_key="$1"
+    local name="${PACKAGE_NAMES[$package_key]:-}"
+    local url="${PACKAGE_URLS[$package_key]:-}"
     local existing_url
+    if [[ -z "$name" || -z "$url" ]]; then
+        echo "Ошибка: неизвестный ключ пакета: $package_key" >&2
+        return 1
+    fi
     for existing_url in "${URLS_TO_DOWNLOAD[@]}"; do
         if [[ "$existing_url" == "$url" ]]; then
             return
@@ -296,16 +386,11 @@ add_group_duplicate() {
     NAMES_TO_DOWNLOAD+=("$name")
 }
 
-add_group_python() {
-    local name="$1"
-    local url="$2"
-    add_group_package "$name" "$url"
-}
-
 # Функция для обычного .deb пакета
 ask_deb() {
-local name=$1
-local url=$2
+local package_key=$1
+local name="${PACKAGE_NAMES[$package_key]}"
+local url="${PACKAGE_URLS[$package_key]}"
 read -p "Установить [ $name ]? (y/n): " ans
 if [[ "$ans" =~ ^[YyДд]$ ]]; then
 URLS_TO_DOWNLOAD+=("$url")
@@ -318,9 +403,10 @@ fi
 
 # Функция для пакетов-дубликатов (wget vs репозиторий)
 ask_duplicate() {
-local name=$1
-local url=$2
-local repo_flag=$3 # "R7" или "MAX"
+local package_key=$1
+local name="${PACKAGE_NAMES[$package_key]}"
+local url="${PACKAGE_URLS[$package_key]}"
+local repo_flag=$2
 echo "--------------------------------------------------------------------------------"
 echo "Пакет [ $name ] доступен из двух источников. Выберите действие:"
 echo "  1) Скачать .deb пакет (wget)"
@@ -357,23 +443,22 @@ echo "  4) Python 3.13.15"
 echo "  5) Python 3.14.7"
 echo "  0) Пропустить"
 read -p "Выберите версию (1-5 или 0): " py_ans
-local py_url=""
-local py_name=""
+local py_key=""
 case $py_ans in
-1) py_url="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.9.25-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"; py_name="Python 3.9.25" ;;
-2) py_url="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.10.20-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"; py_name="Python 3.10.20" ;;
-3) py_url="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"; py_name="Python 3.12.13" ;;
-4) py_url="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.13.15-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"; py_name="Python 3.13.15" ;;
-5) py_url="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.14.7-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"; py_name="Python 3.14.7" ;;
+1) py_key="python-3.9" ;;
+2) py_key="python-3.10" ;;
+3) py_key="python-3.12" ;;
+4) py_key="python-3.13" ;;
+5) py_key="python-3.14" ;;
 *)
 echo -e "\e[33m  -> Пропущено.\e[0m"
 return
 ;;
 esac
-if [ -n "$py_url" ]; then
-URLS_TO_DOWNLOAD+=("$py_url")
-NAMES_TO_DOWNLOAD+=("$py_name")
-echo -e "\e[32m  -> Выбран $py_name. Добавлено в очередь.\e[0m"
+if [ -n "$py_key" ]; then
+URLS_TO_DOWNLOAD+=("${PACKAGE_URLS[$py_key]}")
+NAMES_TO_DOWNLOAD+=("${PACKAGE_NAMES[$py_key]}")
+echo -e "\e[32m  -> Выбран ${PACKAGE_NAMES[$py_key]}. Добавлено в очередь.\e[0m"
 fi
 else
 echo -e "\e[33m  -> Пропущено.\e[0m"
@@ -386,47 +471,47 @@ if [[ $AUTO_MODE -eq 1 ]]; then
         local group="$1"
         case "$group" in
             office)
-                add_group_package "Foxit PDF Reader" "https://easyastra.ru/store1.8/foxitreader.deb"
-                add_group_package "NAPS2" "https://easyastra.ru/store1.8/naps2.deb"
-                add_group_package "OnlyOffice Desktop Editors" "https://easyastra.ru/store1.8/onlyoffice-desktopeditors.deb"
-                add_group_package "Сервис Среда" "https://easyastra.ru/store1.8/sreda.deb"
+                add_group_package foxit
+                add_group_package naps2
+                add_group_package onlyoffice
+                add_group_package sreda
                 ;;
             internet)
-                add_group_package "ВК Мессенджер" "https://easyastra.ru/store1.8/vkmessenger.deb"
-                add_group_package "Яндекс Браузер" "https://easyastra.ru/store1.8/Yandex.deb"
+                add_group_package vkmessenger
+                add_group_package yandex
                 ;;
             programming)
-                add_group_package "Code::Blocks" "https://easyastra.ru/store1.8/codeblocks.deb"
-                add_group_package "Eclipse IDE for C/C++ Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-cpp.deb"
-                add_group_package "Eclipse IDE for Java Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-java.deb"
-                add_group_package "IDLE 3 (Python 3.11)" "https://easyastra.ru/store1.8/idle-python3.11.deb"
-                add_group_package "Notepad++ 8.9.8.1" "https://easyastra.ru/store1.8/notepadplus.deb"
-                add_group_package "PascalABC.NET" "https://easyastra.ru/store1.8/pascalABC.deb"
-                add_group_package "PyCharm" "https://easyastra.ru/store1.8/pycharm.deb"
-                add_group_package "Visual Studio Code" "https://easyastra.ru/store1.8/code.deb"
-                add_group_python "Python 3.12.13" "https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
+                add_group_package codeblocks
+                add_group_package eclipse-cpp
+                add_group_package eclipse-java
+                add_group_package idle
+                add_group_package notepadplus
+                add_group_package pascalabc
+                add_group_package pycharm
+                add_group_package vscode
+                add_group_package python-3.12
                 ;;
             graphics)
-                add_group_package "GIMP 3" "https://easyastra.ru/store1.8/gimp3.deb"
-                add_group_package "InkScape" "https://easyastra.ru/store1.8/inkscape.deb"
-                add_group_package "Scribus" "https://easyastra.ru/store1.8/scribus.deb"
-                add_group_package "Audacity" "https://easyastra.ru/store1.8/audacity.deb"
-                add_group_package "OBS Studio" "https://easyastra.ru/store1.8/obs-studio.deb"
-                add_group_package "VLC" "https://easyastra.ru/store1.8/vlc.deb"
+                add_group_package gimp
+                add_group_package inkscape
+                add_group_package scribus
+                add_group_package audacity
+                add_group_package obs
+                add_group_package vlc
                 ;;
             edu)
-                add_group_package "КуМир 2" "https://easyastra.ru/store1.8/kumir2.deb"
-                add_group_package "Basic 256" "https://easyastra.ru/store1.8/basic256.deb"
-                add_group_package "Code::Blocks" "https://easyastra.ru/store1.8/codeblocks.deb"
-                add_group_package "Eclipse IDE for Java Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-java.deb"
-                add_group_package "IDLE 3 (Python 3.11)" "https://easyastra.ru/store1.8/idle-python3.11.deb"
-                add_group_package "Notepad++ 8.9.8.1" "https://easyastra.ru/store1.8/notepadplus.deb"
-                add_group_package "PascalABC.NET" "https://easyastra.ru/store1.8/pascalABC.deb"
-                add_group_package "PyCharm" "https://easyastra.ru/store1.8/pycharm.deb"
-                add_group_python "Python 3.12.13" "https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
-                add_group_package "Visual Studio Code" "https://easyastra.ru/store1.8/code.deb"
-                add_group_package "R7 Office" "https://easyastra.ru/store1.8/r7-office.deb"
-                add_group_package "Foxit PDF Reader" "https://easyastra.ru/store1.8/foxitreader.deb"
+                add_group_package kumir
+                add_group_package basic256
+                add_group_package codeblocks
+                add_group_package eclipse-java
+                add_group_package idle
+                add_group_package notepadplus
+                add_group_package pascalabc
+                add_group_package pycharm
+                add_group_package python-3.12
+                add_group_package vscode
+                add_group_package r7-office
+                add_group_package foxit
                 ;;
             all)
                 process_group_selection office
@@ -447,33 +532,33 @@ if [[ $AUTO_MODE -eq 1 ]]; then
     fi
 else
     echo "=== РАЗДЕЛ 1: СТАНДАРТНЫЕ .DEB ПАКЕТЫ ==="
-    ask_deb "Foxit PDF Reader" "https://easyastra.ru/store1.8/foxitreader.deb"
-    ask_deb "NAPS2" "https://easyastra.ru/store1.8/naps2.deb"
-    ask_deb "OnlyOffice Desktop Editors" "https://easyastra.ru/store1.8/onlyoffice-desktopeditors.deb"
-    ask_deb "ВК Мессенджер" "https://easyastra.ru/store1.8/vkmessenger.deb"
-    ask_deb "Сервис Среда" "https://easyastra.ru/store1.8/sreda.deb"
-    ask_deb "Яндекс Браузер" "https://easyastra.ru/store1.8/Yandex.deb"
-    ask_deb "GIMP 3" "https://easyastra.ru/store1.8/gimp3.deb"
-    ask_deb "InkScape" "https://easyastra.ru/store1.8/inkscape.deb"
-    ask_deb "Scribus" "https://easyastra.ru/store1.8/scribus.deb"
-    ask_deb "Audacity" "https://easyastra.ru/store1.8/audacity.deb"
-    ask_deb "OBS Studio" "https://easyastra.ru/store1.8/obs-studio.deb"
-    ask_deb "VLC" "https://easyastra.ru/store1.8/vlc.deb"
-    ask_deb "КуМир 2" "https://easyastra.ru/store1.8/kumir2.deb"
-    ask_deb "Basic 256" "https://easyastra.ru/store1.8/basic256.deb"
-    ask_deb "Code::Blocks" "https://easyastra.ru/store1.8/codeblocks.deb"
-    ask_deb "Eclipse IDE for C/C++ Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-cpp.deb"
-    ask_deb "Eclipse IDE for Java Developers 2026.09" "https://easyastra.ru/store1.8/eclipse-java.deb"
-    ask_deb "IDLE 3 (Python 3.11)" "https://easyastra.ru/store1.8/idle-python3.11.deb"
-    ask_deb "Notepad++ 8.9.8.1" "https://easyastra.ru/store1.8/notepadplus.deb"
-    ask_deb "PascalABC.NET" "https://easyastra.ru/store1.8/pascalABC.deb"
-    ask_deb "PyCharm" "https://easyastra.ru/store1.8/pycharm.deb"
-    ask_deb "Visual Studio Code" "https://easyastra.ru/store1.8/code.deb"
+    ask_deb foxit
+    ask_deb naps2
+    ask_deb onlyoffice
+    ask_deb vkmessenger
+    ask_deb sreda
+    ask_deb yandex
+    ask_deb gimp
+    ask_deb inkscape
+    ask_deb scribus
+    ask_deb audacity
+    ask_deb obs
+    ask_deb vlc
+    ask_deb kumir
+    ask_deb basic256
+    ask_deb codeblocks
+    ask_deb eclipse-cpp
+    ask_deb eclipse-java
+    ask_deb idle
+    ask_deb notepadplus
+    ask_deb pascalabc
+    ask_deb pycharm
+    ask_deb vscode
 
     echo ""
     echo "=== РАЗДЕЛ 2: ПАКЕТЫ С ВЫБОРОМ ИСТОЧНИКА ==="
-    ask_duplicate "R7 Office" "https://easyastra.ru/store1.8/r7-office.deb" "R7"
-    ask_duplicate "MAX" "https://easyastra.ru/store1.8/max.deb" "MAX"
+    ask_duplicate r7-office R7
+    ask_duplicate max MAX
 
     echo ""
     echo "=== РАЗДЕЛ 3: СПЕЦИАЛЬНЫЕ ПАКЕТЫ ==="
@@ -560,8 +645,8 @@ sudo sed -i '/cdrom:/ s/^#//' /etc/apt/sources.list
 sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^#//' {} \; 2>/dev/null
 
 # --- Завершение ---
-clear
+#clear
 echo "======================================"
-echo "Установка завершена! Закройте терминал"
+echo "Установка завершена!"
 echo "======================================"
 exit 0
