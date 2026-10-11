@@ -7,6 +7,11 @@ usage() {
 
 Опции:
   --repo <frozen|stable>     Выбор ветки репозитория Astra Linux 1.8
+  --no-repo                  Не подключать репозитории Astra Linux
+  --dist-upgrade             Выполнить apt dist-upgrade -y
+  --autoremove               Выполнить apt autoremove -y
+  --autoclean                Выполнить apt autoclean
+  --no-sane                  Не устанавливать подсистему сканирования SANE
   --office                   Установить офисный софт
   --internet                 Установить браузеры и мессенджеры
   --programming              Установить инструменты для программирования и информатики
@@ -26,6 +31,8 @@ usage() {
 Примеры:
   ./auto-install.sh --repo stable --office --internet
   ./auto-install.sh --repo frozen --programming --edu
+  ./auto-install.sh --no-repo --office --no-sane
+  ./auto-install.sh --repo stable --dist-upgrade --autoremove --autoclean --no-sane
   ./auto-install.sh --full-os
   ./auto-install.sh --browsers-only --dry-run
   ./auto-install.sh --education-only --list
@@ -91,6 +98,11 @@ AUTO_MODE=0
 LIST_ONLY=0
 DRY_RUN=0
 SAVE_LOG=0
+SKIP_REPOSITORIES=0
+RUN_DIST_UPGRADE=0
+RUN_AUTOREMOVE=0
+RUN_AUTOCLEAN=0
+SKIP_SANE=0
 INSTALL_GROUPS=()
 
 while [[ $# -gt 0 ]]; do
@@ -100,8 +112,35 @@ while [[ $# -gt 0 ]]; do
                 echo "Ошибка: после --repo укажите frozen или stable." >&2
                 exit 1
             fi
-            REPO_BRANCH="$2"
+            case "$2" in
+                frozen) REPO_BRANCH="1" ;;
+                stable) REPO_BRANCH="2" ;;
+                *)
+                    echo "Ошибка: неизвестная ветка «$2». Укажите frozen или stable." >&2
+                    exit 1
+                    ;;
+            esac
             shift 2
+            ;;
+        --no-repo)
+            SKIP_REPOSITORIES=1
+            shift
+            ;;
+        --dist-upgrade)
+            RUN_DIST_UPGRADE=1
+            shift
+            ;;
+        --autoremove)
+            RUN_AUTOREMOVE=1
+            shift
+            ;;
+        --autoclean)
+            RUN_AUTOCLEAN=1
+            shift
+            ;;
+        --no-sane)
+            SKIP_SANE=1
+            shift
             ;;
         --office|--internet|--programming|--graphics|--edu|--all)
             INSTALL_GROUPS+=("${1#--}")
@@ -151,12 +190,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ $SKIP_REPOSITORIES -eq 1 && -n "$REPO_BRANCH" ]]; then
+    echo "Ошибка: --no-repo нельзя использовать вместе с --repo." >&2
+    exit 1
+fi
+
 if [[ $LIST_ONLY -eq 1 ]]; then
     print_package_list
     exit 0
 fi
 
-if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
+if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || $SKIP_REPOSITORIES -eq 1 ||
+    $RUN_DIST_UPGRADE -eq 1 || $RUN_AUTOREMOVE -eq 1 || $RUN_AUTOCLEAN -eq 1 || $SKIP_SANE -eq 1 ||
+    "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
     AUTO_MODE=1
 fi
 
@@ -177,6 +223,84 @@ if [[ $SAVE_LOG -eq 1 ]]; then
     echo "Лог работы сохраняется в: $LOG_FILE"
 fi
 
+log_incident() {
+    local step="$1"
+    local status="$2"
+    local log_file="${LOG_FILE:-$PWD/auto-install-incidents-$(date +%Y%m%d-%H%M%S).log}"
+
+    if ! printf '[%s] Ошибка на шаге "%s" (код завершения: %s)\n' \
+        "$(date '+%Y-%m-%d %H:%M:%S')" "$step" "$status" >> "$log_file"; then
+        echo "Предупреждение: не удалось записать инцидент в лог $log_file." >&2
+    else
+        echo "Инцидент записан в лог: $log_file"
+    fi
+}
+
+run_step() {
+    local step="$1"
+    shift
+    local status
+
+    if "$@"; then
+        return 0
+    else
+        status=$?
+    fi
+
+    echo "Предупреждение: не удалось выполнить шаг «$step»." >&2
+    log_incident "$step" "$status"
+
+    if [[ $AUTO_MODE -eq 0 && -t 0 ]]; then
+        local continue_ans
+        read -r -p "Продолжить работу со следующего пункта? (y/n): " continue_ans
+        if [[ ! "$continue_ans" =~ ^[YyДд]$ ]]; then
+            echo "Работа скрипта остановлена по выбору пользователя."
+            exit 1
+        fi
+    fi
+
+    return "$status"
+}
+
+deduplicate_astra_repositories() {
+    local apt_dir="${1:-/etc/apt}"
+    sudo bash -s -- "$apt_dir" <<'ROOT_SCRIPT'
+set -e
+apt_dir="$1"
+shopt -s nullglob
+source_files=("$apt_dir/sources.list" "$apt_dir"/sources.list.d/*.list)
+declare -A seen_entries=()
+duplicates_removed=0
+
+for source_file in "${source_files[@]}"; do
+    [[ -f "$source_file" && ! -L "$source_file" ]] || continue
+    temp_file=$(mktemp "${source_file}.XXXXXX")
+    cp -p "$source_file" "$temp_file"
+    : > "$temp_file"
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^[[:space:]]*deb(-src)?[[:space:]] &&
+            ( "$line" == *"download.astralinux.ru/astra/"* || "$line" == *"dl.astralinux.ru/astra/"* ) ]]; then
+            if [[ ${seen_entries["$line"]+present} ]]; then
+                duplicates_removed=$((duplicates_removed + 1))
+                continue
+            fi
+            seen_entries["$line"]=1
+        fi
+        printf '%s\n' "$line" >> "$temp_file"
+    done < "$source_file"
+
+    if cmp -s "$source_file" "$temp_file"; then
+        rm -f "$temp_file"
+    else
+        mv "$temp_file" "$source_file"
+    fi
+done
+
+printf 'Удалено точных дубликатов репозиториев Astra: %s\n' "$duplicates_removed"
+ROOT_SCRIPT
+}
+
 echo "==============================================================================="
 echo " "
 echo "R.Tyan (c) 2026 | tyanrv@lbt.yanao.ru"
@@ -195,6 +319,7 @@ echo "==========================================================================
 echo "Активация репозиториев в ALSE 1.8 для установки стороннего софта и зависимостей"
 echo "==============================================================================="
 
+REPOSITORIES_CONNECTED=0
 if [[ -n "$REPO_BRANCH" ]]; then
     NUMBER="$REPO_BRANCH"
 else
@@ -202,13 +327,22 @@ else
         if [[ ${#INSTALL_GROUPS[@]} -gt 0 ]]; then
             echo "Авто-режим активирован. Проверяем метки репозитория..."
         fi
-        if [[ -z "$REPO_BRANCH" ]]; then
+        if [[ $SKIP_REPOSITORIES -eq 1 ]]; then
+            NUMBER="skip"
+            echo "Подключение репозиториев Astra Linux пропущено по параметру --no-repo."
+        elif [[ -z "$REPO_BRANCH" ]]; then
             NUMBER="1"
         fi
     else
-        echo "1 - Ветка Frozen для 1.8.4.48 (Рекомендуется для АРМ ГИА-11 в ППЭ)"
-        echo "2 - Ветка Stable для 1.8 (Получение оперативных обновлений ОС)"
-        read -p "Укажите числовое значение: " NUMBER
+        read -r -p "Подключить репозитории ALSE 1.8 для установки стороннего ПО и зависимостей? (y/n): " connect_repos_ans
+        if [[ "$connect_repos_ans" =~ ^[YyДд]$ ]]; then
+            echo "1 - Ветка Frozen для 1.8.4.48 (Рекомендуется для АРМ ГИА-11 в ППЭ)"
+            echo "2 - Ветка Stable для 1.8 (Получение оперативных обновлений ОС)"
+            read -r -p "Укажите числовое значение: " NUMBER
+        else
+            NUMBER="skip"
+            echo "Подключение репозиториев пропущено."
+        fi
     fi
 fi
 
@@ -217,22 +351,32 @@ if [[ $DRY_RUN -eq 1 ]]; then
 else
     case "$NUMBER" in
         1)
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
-            echo "Выбрана ветка Frozen для 1.8.4.48. Продолжаем настройку системы..."
+            REPOSITORY_FILE="/etc/apt/sources.list.d/astra-frozen-extended.list"
+            OTHER_REPOSITORY_FILE="/etc/apt/sources.list.d/astra-stable-extended.list"
+            REPOSITORY_CONTENT=$'deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware\ndeb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware'
+            REPOSITORY_LABEL="Frozen для 1.8.4.48"
             ;;
         2)
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
-            echo "Выбрана ветка Stable для 1.8. Продолжаем настройку системы..."
+            REPOSITORY_FILE="/etc/apt/sources.list.d/astra-stable-extended.list"
+            OTHER_REPOSITORY_FILE="/etc/apt/sources.list.d/astra-frozen-extended.list"
+            REPOSITORY_CONTENT=$'deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware\ndeb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware'
+            REPOSITORY_LABEL="Stable для 1.8"
+            ;;
+        skip)
             ;;
         *)
-            echo "======================"
-            echo "Действие отсутствует..."
-            echo "======================"
-            exit 0
+            echo "Предупреждение: неизвестная ветка репозитория «$NUMBER», подключение пропущено." >&2
             ;;
     esac
+
+    if [[ -n "${REPOSITORY_FILE:-}" ]]; then
+        if run_step "подключение репозиториев $REPOSITORY_LABEL" sudo tee "$REPOSITORY_FILE" <<< "$REPOSITORY_CONTENT" >/dev/null; then
+            REPOSITORIES_CONNECTED=1
+            run_step "удаление файла невыбранной ветки репозитория" sudo rm -f "$OTHER_REPOSITORY_FILE"
+            run_step "проверка и устранение дублирующих репозиториев Astra" deduplicate_astra_repositories
+            echo "Выбрана ветка $REPOSITORY_LABEL. Продолжаем настройку системы..."
+        fi
+    fi
 fi
 
 # --- БЛОК ПОДГОТОВКИ СИСТЕМЫ (РЕШАЕТ ПРОБЛЕМУ С DVD И СЛОМАННЫМИ ПАКЕТАМИ) ---
@@ -240,52 +384,71 @@ if [[ $DRY_RUN -eq 1 ]]; then
     echo "DRY-RUN: пропускаем отключение CD-ROM, подготовку apt-репозиториев, установку SANE и обновление системы."
 else
     echo "Отключение CD-ROM репозитория (чтобы система не просила вставить диск)..."
-    sudo sed -i '/cdrom:/ s/^/#/' /etc/apt/sources.list
-    sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \; 2>/dev/null
+    run_step "отключение CD-ROM репозитория в sources.list" sudo sed -i '/cdrom:/ s/^/#/' /etc/apt/sources.list
+    run_step "отключение CD-ROM репозиториев в sources.list.d" sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \;
 
     echo "Проверка и исправление состояния пакетной базы (fix-broken)..."
-    sudo apt clean
-    sudo apt --fix-broken install -y
+    run_step "очистка кэша apt перед установкой" sudo apt clean
+    run_step "исправление состояния пакетной базы" sudo apt --fix-broken install -y
 
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
-    sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
-    sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
+    run_step "исправление старых записей репозитория R7 Office" sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \;
+    run_step "исправление записей репозитория R7 Office" sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \;
 
-    if ! grep -q "dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
+    if [[ $REPOSITORIES_CONNECTED -eq 1 ]] && ! grep -q "dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
         echo "Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей..."
-        echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
+        run_step "подключение основного репозитория Astra Linux" sudo tee /etc/apt/sources.list.d/astra-main.list <<< "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" >/dev/null
     fi
 
     echo "Обновление списков пакетов (это может занять некоторое время)..."
-    sudo apt update
+    run_step "обновление списков пакетов" sudo apt update
 
-    echo "Установка подсистемы сканирования SANE..."
-    if ! sudo apt install -y sane sane-utils; then
-        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
-        exit 1
-    fi
-
-    if [[ $AUTO_MODE -eq 0 ]]; then
-        read -r -p "Выполнить обновление системы и очистку пакетов (dist-upgrade, autoremove, autoclean)? (y/n): " upgrade_ans
+    if [[ $AUTO_MODE -eq 1 ]]; then
+        if [[ $RUN_DIST_UPGRADE -eq 1 ]]; then
+            echo "Обновление системы..."
+            run_step "обновление системы (dist-upgrade)" sudo apt dist-upgrade -y
+        fi
+        if [[ $RUN_AUTOREMOVE -eq 1 ]]; then
+            echo "Удаление неиспользуемых пакетов..."
+            run_step "удаление неиспользуемых пакетов (autoremove)" sudo apt autoremove -y
+        fi
+        if [[ $RUN_AUTOCLEAN -eq 1 ]]; then
+            echo "Очистка локального кэша пакетов..."
+            run_step "очистка локального кэша пакетов (autoclean)" sudo apt autoclean
+        fi
+    elif [[ $REPOSITORIES_CONNECTED -eq 1 ]]; then
+        read -r -p "Обновить систему? (y/n): " upgrade_ans
         if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
             echo "Обновление системы..."
-            if ! sudo apt dist-upgrade -y; then
-                echo "Ошибка: не удалось выполнить dist-upgrade." >&2
-                exit 1
-            fi
-            echo "Удаление неиспользуемых пакетов..."
-            if ! sudo apt autoremove -y; then
-                echo "Ошибка: не удалось выполнить autoremove." >&2
-                exit 1
-            fi
-            echo "Очистка локального кэша пакетов..."
-            if ! sudo apt autoclean; then
-                echo "Ошибка: не удалось выполнить autoclean." >&2
-                exit 1
-            fi
-        else
-            echo "Обновление и очистка пакетов пропущены."
+            run_step "обновление системы (dist-upgrade)" sudo apt dist-upgrade -y
         fi
+
+        read -r -p "Удалить пакеты, ставшие ненужными? (y/n): " autoremove_ans
+        if [[ "$autoremove_ans" =~ ^[YyДд]$ ]]; then
+            echo "Удаление неиспользуемых пакетов..."
+            run_step "удаление неиспользуемых пакетов (autoremove)" sudo apt autoremove -y
+        fi
+
+        read -r -p "Очистить локальный кэш пакетов? (y/n): " autoclean_ans
+        if [[ "$autoclean_ans" =~ ^[YyДд]$ ]]; then
+            echo "Очистка локального кэша пакетов..."
+            run_step "очистка локального кэша пакетов (autoclean)" sudo apt autoclean
+        fi
+    fi
+
+    if [[ $AUTO_MODE -eq 1 ]]; then
+        install_sane=$((1 - SKIP_SANE))
+    else
+        read -r -p "Установить подсистему сканирования SANE? (y/n): " install_sane_ans
+        if [[ "$install_sane_ans" =~ ^[YyДд]$ ]]; then
+            install_sane=1
+        else
+            install_sane=0
+        fi
+    fi
+    if [[ $install_sane -eq 1 ]]; then
+        echo "Установка подсистемы сканирования SANE..."
+        run_step "установка подсистемы сканирования SANE" sudo apt install -y sane sane-utils
     fi
 fi
 # -----------------------------------------------------------------------------
@@ -602,8 +765,9 @@ wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$PWD/tmp_deb/$filename
 done
 echo "Переход в директорию с пакетами и установка (с автоматической подгрузкой зависимостей)..."
 cd "$PWD/tmp_deb/" || exit 1
+run_step "обновление списков пакетов перед установкой выбранных программ" sudo apt update
 # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-sudo apt -f -y install ./*.deb
+run_step "установка выбранных .deb-пакетов" sudo apt -f -y install ./*.deb
 echo "Очистка временных файлов..."
 cd ../ || exit 1
 rm -rf "$PWD/tmp_deb/"
