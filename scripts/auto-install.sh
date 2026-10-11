@@ -98,6 +98,7 @@ AUTO_MODE=0
 LIST_ONLY=0
 DRY_RUN=0
 SAVE_LOG=0
+START_DIR="$PWD"
 SKIP_REPOSITORIES=0
 RUN_DIST_UPGRADE=0
 RUN_AUTOREMOVE=0
@@ -219,9 +220,14 @@ if [[ $SAVE_LOG -eq 1 ]]; then
         echo "Ошибка: не удалось создать файл лога: $LOG_FILE" >&2
         exit 1
     fi
+    exec 3>&2
     exec > >(tee -a "$LOG_FILE") 2>&1
     echo "Лог работы сохраняется в: $LOG_FILE"
 fi
+
+apt_cmd() {
+    sudo apt-get -o Dpkg::Use-Pty=0 -o Dpkg::Progress-Fancy=0 "$@"
+}
 
 log_incident() {
     local step="$1"
@@ -388,8 +394,8 @@ else
     run_step "отключение CD-ROM репозиториев в sources.list.d" sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \;
 
     echo "Проверка и исправление состояния пакетной базы (fix-broken)..."
-    run_step "очистка кэша apt перед установкой" sudo apt clean
-    run_step "исправление состояния пакетной базы" sudo apt --fix-broken install -y
+    run_step "очистка кэша apt перед установкой" apt_cmd clean
+    run_step "исправление состояния пакетной базы" apt_cmd --fix-broken install -y
 
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
     run_step "исправление старых записей репозитория R7 Office" sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \;
@@ -401,38 +407,38 @@ else
     fi
 
     echo "Обновление списков пакетов (это может занять некоторое время)..."
-    run_step "обновление списков пакетов" sudo apt update
+    run_step "обновление списков пакетов" apt_cmd update
 
     if [[ $AUTO_MODE -eq 1 ]]; then
         if [[ $RUN_DIST_UPGRADE -eq 1 ]]; then
             echo "Обновление системы..."
-            run_step "обновление системы (dist-upgrade)" sudo apt dist-upgrade -y
+            run_step "обновление системы (dist-upgrade)" apt_cmd dist-upgrade -y
         fi
         if [[ $RUN_AUTOREMOVE -eq 1 ]]; then
             echo "Удаление неиспользуемых пакетов..."
-            run_step "удаление неиспользуемых пакетов (autoremove)" sudo apt autoremove -y
+            run_step "удаление неиспользуемых пакетов (autoremove)" apt_cmd autoremove -y
         fi
         if [[ $RUN_AUTOCLEAN -eq 1 ]]; then
             echo "Очистка локального кэша пакетов..."
-            run_step "очистка локального кэша пакетов (autoclean)" sudo apt autoclean
+            run_step "очистка локального кэша пакетов (autoclean)" apt_cmd autoclean
         fi
     elif [[ $REPOSITORIES_CONNECTED -eq 1 ]]; then
         read -r -p "Обновить систему? (y/n): " upgrade_ans
         if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
             echo "Обновление системы..."
-            run_step "обновление системы (dist-upgrade)" sudo apt dist-upgrade -y
+            run_step "обновление системы (dist-upgrade)" apt_cmd dist-upgrade -y
         fi
 
         read -r -p "Удалить пакеты, ставшие ненужными? (y/n): " autoremove_ans
         if [[ "$autoremove_ans" =~ ^[YyДд]$ ]]; then
             echo "Удаление неиспользуемых пакетов..."
-            run_step "удаление неиспользуемых пакетов (autoremove)" sudo apt autoremove -y
+            run_step "удаление неиспользуемых пакетов (autoremove)" apt_cmd autoremove -y
         fi
 
         read -r -p "Очистить локальный кэш пакетов? (y/n): " autoclean_ans
         if [[ "$autoclean_ans" =~ ^[YyДд]$ ]]; then
             echo "Очистка локального кэша пакетов..."
-            run_step "очистка локального кэша пакетов (autoclean)" sudo apt autoclean
+            run_step "очистка локального кэша пакетов (autoclean)" apt_cmd autoclean
         fi
     fi
 
@@ -448,7 +454,7 @@ else
     fi
     if [[ $install_sane -eq 1 ]]; then
         echo "Установка подсистемы сканирования SANE..."
-        run_step "установка подсистемы сканирования SANE" sudo apt install -y sane sane-utils
+        run_step "установка подсистемы сканирования SANE" apt_cmd install -y sane sane-utils
     fi
 fi
 # -----------------------------------------------------------------------------
@@ -752,25 +758,47 @@ fi
 
 # --- ЭТАП 1: Скачивание и установка .deb пакетов ---
 if [ ${#URLS_TO_DOWNLOAD[@]} -gt 0 ]; then
-echo "Создание временной директории..."
-mkdir -p "$PWD/tmp_deb/"
+if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$START_DIR/tmp_deb.XXXXXX")"; then
+    echo "Ошибка: не удалось создать папку для скачанных пакетов." >&2
+    exit 1
+fi
+declare -a VALID_DEB_FILES=()
+echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
-echo "Загрузка: ${NAMES_TO_DOWNLOAD[$i]}..."
+echo "Скачивание: ${NAMES_TO_DOWNLOAD[$i]}"
 filename=$(basename "${URLS_TO_DOWNLOAD[$i]}" | sed 's/.*file=\(.*\.deb\).*/\1/')
 if [[ "$filename" == *"raw"* ]] || [[ -z "$filename" ]]; then
 filename="package_${i}.deb"
 fi
-wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$PWD/tmp_deb/$filename" -q --show-progress
+package_path="$DEB_DOWNLOAD_DIR/$filename"
+if [[ $SAVE_LOG -eq 1 ]]; then
+    wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$package_path" -q --show-progress --progress=bar:force:noscroll 2>&3
+else
+    wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$package_path" -q --show-progress --progress=bar:force:noscroll
+fi
+download_status=$?
+if [[ $download_status -ne 0 ]]; then
+    echo "Ошибка: не удалось скачать пакет «${NAMES_TO_DOWNLOAD[$i]}» (код wget: $download_status)." >&2
+    exit "$download_status"
+fi
+package_size=$(du -h "$package_path" | cut -f1)
+echo "Скачан пакет: ${NAMES_TO_DOWNLOAD[$i]} — $package_size"
+if dpkg-deb --info "$package_path" >/dev/null &&
+    dpkg-deb --contents "$package_path" >/dev/null; then
+    VALID_DEB_FILES+=("$package_path")
+else
+    echo "Ошибка: пакет «${NAMES_TO_DOWNLOAD[$i]}» повреждён или не является корректным .deb; он будет пропущен." >&2
+fi
 done
-echo "Переход в директорию с пакетами и установка (с автоматической подгрузкой зависимостей)..."
-cd "$PWD/tmp_deb/" || exit 1
-run_step "обновление списков пакетов перед установкой выбранных программ" sudo apt update
-# Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-run_step "установка выбранных .deb-пакетов" sudo apt -f -y install ./*.deb
-echo "Очистка временных файлов..."
-cd ../ || exit 1
-rm -rf "$PWD/tmp_deb/"
+if [[ ${#VALID_DEB_FILES[@]} -gt 0 ]]; then
+    echo "Переход к установке ${#VALID_DEB_FILES[@]} корректных .deb-пакетов (с автоматической подгрузкой зависимостей)..."
+    run_step "обновление списков пакетов перед установкой выбранных программ" apt_cmd update
+    # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети.
+    run_step "установка выбранных .deb-пакетов" apt_cmd -f -y install "${VALID_DEB_FILES[@]}"
+else
+    echo "Нет корректных .deb-пакетов для установки." >&2
+fi
 else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
 fi
@@ -788,8 +816,8 @@ EOF
 sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
 # Правильная строка репозитория с кодовым именем 'astralinux'
 echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
-sudo apt update
-sudo apt install -y r7-office
+apt_cmd update
+apt_cmd install -y r7-office
 fi
 
 # --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
@@ -798,9 +826,9 @@ echo "Настройка репозитория и установка MAX..."
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/max.list
-sudo apt update
-sudo apt install -y max
-apt policy max
+apt_cmd update
+apt_cmd install -y max
+apt-cache policy max
 fi
 
 # --- Восстановление CD-ROM репозитория после завершения операций ---
@@ -810,6 +838,24 @@ sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/
 
 # --- Завершение ---
 #clear
+if [[ -t 0 ]]; then
+    read -r -p "Удалить скачанные .deb-файлы и очистить кэш APT? (y/n): " cleanup_ans
+    if [[ "$cleanup_ans" =~ ^[YyДд]$ ]]; then
+        if [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
+            if run_step "удаление скачанных .deb-файлов" rm -rf -- "$DEB_DOWNLOAD_DIR"; then
+                echo "Скачанные .deb-файлы удалены."
+            fi
+        fi
+        run_step "очистка кэша APT" apt_cmd clean
+    else
+        if [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
+            echo "Скачанные .deb-файлы оставлены: $DEB_DOWNLOAD_DIR"
+        fi
+        echo "Кэш APT оставлен."
+    fi
+elif [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
+    echo "Интерактивный запрос пропущен; скачанные .deb-файлы оставлены: $DEB_DOWNLOAD_DIR"
+fi
 echo "======================================"
 echo "Установка завершена!"
 echo "======================================"
