@@ -66,7 +66,7 @@
 
 Порядок подготовки системы: выбор ветки репозитория (Frozen/Stable), затем проверка `/etc/apt/sources.list` и активных файлов `sources.list.d/*.list` на дублирующиеся записи (точные повторы удаляются, нормализуя пробелы и завершающий слеш URL). После этого в интерактивном режиме предлагается выполнить `apt-get dist-upgrade -y`, `apt-get autoremove -y` и `apt-get autoclean`; затем скрипт обновляет списки пакетов и устанавливает `sane` и `sane-utils`. Обновление и очистка выполняются только после подтверждения; при отказе установка выбранных программ продолжается. В CLI-режиме этот вопрос пропускается. В режиме `--dry-run` системные изменения и установка SANE пропускаются.
 
-После подготовки системы формируется список выбранного ПО. Пакеты Visual Studio Code, OnlyOffice и ВК Мессенджера скачиваются из [релиза v2.0](https://github.com/teanrus/astra-gia/releases/tag/v2.0); R7 Office и MAX устанавливаются только из официальных репозиториев. Яндекс Браузер, IDLE, Basic 256, Scribus и Audacity устанавливаются через `apt install` из репозитория Astra. GIMP, Inkscape и VLC не предлагаются к установке, так как входят в базовую поставку ALSE 1.8.
+После подготовки системы формируется список выбранного ПО. Пакеты Visual Studio Code, OnlyOffice и ВК Мессенджера скачиваются из [релиза v2.0](https://github.com/teanrus/astra-gia/releases/tag/v2.0); R7 Office и MAX устанавливаются только из официальных репозиториев. Яндекс Браузер, IDLE, Basic 256, Scribus и Audacity устанавливаются через `apt install` из репозитория Astra.
 
 ---
 
@@ -86,11 +86,13 @@
 Вы можете клонировать репозиторий или скачать скрипт напрямую:
 
 ```bash
-# Клонирование репозитория
-git clone https://github.com/teanrus/astra-gia.git
-cd astra-gia/scripts
+# Создать каталог для скриптов
+mkdir -p ~/inst
 
-# ИЛИ скачивание только скрипта
+# Перейти в каталог
+cd ~/inst
+
+# Cкачать скрипт
 wget https://raw.githubusercontent.com/teanrus/astra-gia/main/scripts/auto-install.sh -O auto-install.sh
 ```
 
