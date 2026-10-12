@@ -353,7 +353,6 @@ if [[ $DRY_RUN -eq 1 ]]; then
     echo "Режим dry-run активирован. Изменения в системных репозиториях и установка пакетов будут пропущены."
 else
     case "$NUMBER" in
-<<<<<<< HEAD
         1|frozen)
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
@@ -363,19 +362,8 @@ else
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
             echo "Выбрана ветка Stable для 1.8. Продолжаем настройку системы..."
-=======
-        1)
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
-            echo "Выбрана ветка Frozen для 1.8.4.48. Продолжаем настройку системы..."
-            ;;
-        2)
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
-            echo "Выбрана ветка Stable для 1.8. Продолжаем настройку системы..."
             ;;
         skip)
->>>>>>> 06799b4ffaab84f412a2893ecb5aa8c134727e43
             ;;
         *)
             echo "Предупреждение: неизвестная ветка репозитория «$NUMBER», подключение пропущено." >&2
@@ -430,27 +418,19 @@ else
     fi
 
     echo "Обновление списков пакетов (это может занять некоторое время)..."
-<<<<<<< HEAD
-    sudo apt update
-=======
-<<<<<<< HEAD
     if ! sudo apt update; then
         echo "Ошибка: не удалось обновить списки пакетов." >&2
         exit 1
     fi
 
-    echo "Установка подсистемы сканирования SANE..."
-    if ! sudo apt install -y sane sane-utils; then
-        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
-        exit 1
-=======
-    run_step "обновление списков пакетов" apt_cmd update
->>>>>>> c69ee36a6adfd2db25ac273da2f4de74e853f399
-
-    echo "Установка подсистемы сканирования SANE..."
-    if ! sudo apt install -y sane sane-utils; then
-        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
-        exit 1
+    if [[ $SKIP_SANE -eq 0 ]]; then
+        echo "Установка подсистемы сканирования SANE..."
+        if ! sudo apt install -y sane sane-utils; then
+            echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
+            exit 1
+        fi
+    else
+        echo "Подсистема SANE пропущена по параметру --no-sane."
     fi
 
     if [[ $AUTO_MODE -eq 0 ]]; then
@@ -475,14 +455,6 @@ else
             echo "Обновление и очистка пакетов пропущены."
         fi
     fi
-<<<<<<< HEAD
-=======
-    if [[ $install_sane -eq 1 ]]; then
-        echo "Установка подсистемы сканирования SANE..."
-        run_step "установка подсистемы сканирования SANE" apt_cmd install -y sane sane-utils
->>>>>>> 06799b4ffaab84f412a2893ecb5aa8c134727e43
-    fi
->>>>>>> c69ee36a6adfd2db25ac273da2f4de74e853f399
 fi
 # -----------------------------------------------------------------------------
 
