@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Release tag whose .deb assets should receive a SHA256SUMS file
+        description: Release tag whose assets should receive SHA-256 sidecar files
         required: true
         default: v2.0
 
@@ -17,7 +17,7 @@ jobs:
   checksums:
     runs-on: ubuntu-latest
     steps:
-      - name: Download release packages and generate checksums
+      - name: Download release assets and generate checksum files
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
@@ -25,13 +25,27 @@ jobs:
           set -euo pipefail
           assets_dir="$RUNNER_TEMP/release-assets"
           mkdir -p "$assets_dir"
-          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.deb' --dir "$assets_dir"
-          if ! compgen -G "$assets_dir/*.deb" > /dev/null; then
-            echo "No .deb release assets found for $RELEASE_TAG" >&2
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$assets_dir"
+          if ! compgen -G "$assets_dir/*" > /dev/null; then
+            echo "No release assets found for $RELEASE_TAG" >&2
             exit 1
           fi
-          (
-            cd "$assets_dir"
-            sha256sum -- *.deb > SHA256SUMS
-          )
-          gh release upload "$RELEASE_TAG" "$assets_dir/SHA256SUMS" --repo "$GITHUB_REPOSITORY" --clobber
+          manifest="$assets_dir/SHA256SUMS"
+          : > "$manifest"
+          shopt -s nullglob
+          for asset in "$assets_dir"/*; do
+            [[ -f "$asset" ]] || continue
+            filename="${asset##*/}"
+            [[ "$filename" != "SHA256SUMS" && "$filename" != *.sha256 ]] || continue
+            (
+              cd "$assets_dir"
+              sha256sum -- "$filename" > "$filename.sha256"
+              sha256sum -- "$filename" >> "$manifest"
+            )
+          done
+          sidecars=("$assets_dir"/*.sha256)
+          if (( ${#sidecars[@]} == 0 )); then
+            echo "No release assets found to checksum for $RELEASE_TAG" >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" "$manifest" "${sidecars[@]}" --repo "$GITHUB_REPOSITORY" --clobber
