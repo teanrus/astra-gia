@@ -59,12 +59,9 @@ print_package_list() {
   - Python 3.12.13
 
 [graphics]
-  - GIMP 3
-  - InkScape
   - Scribus
   - Audacity
   - OBS Studio
-  - VLC
 
 [edu]
   - КуМир 2
@@ -256,15 +253,6 @@ else
         echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
     fi
 
-    echo "Обновление списков пакетов (это может занять некоторое время)..."
-    sudo apt update
-
-    echo "Установка подсистемы сканирования SANE..."
-    if ! sudo apt install -y sane sane-utils; then
-        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
-        exit 1
-    fi
-
     if [[ $AUTO_MODE -eq 0 ]]; then
         read -r -p "Выполнить обновление системы и очистку пакетов (dist-upgrade, autoremove, autoclean)? (y/n): " upgrade_ans
         if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
@@ -287,23 +275,34 @@ else
             echo "Обновление и очистка пакетов пропущены."
         fi
     fi
+
+    echo "Обновление списков пакетов (это может занять некоторое время)..."
+    if ! sudo apt update; then
+        echo "Ошибка: не удалось обновить списки пакетов." >&2
+        exit 1
+    fi
+
+    echo "Установка подсистемы сканирования SANE..."
+    if ! sudo apt install -y sane sane-utils; then
+        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
+        exit 1
+    fi
 fi
 # -----------------------------------------------------------------------------
 
 # Массивы для хранения выбора пользователя
 declare -a URLS_TO_DOWNLOAD
 declare -a NAMES_TO_DOWNLOAD
+declare -a APT_PACKAGES_TO_INSTALL
 declare -A PACKAGE_NAMES=(
     [foxit]="Foxit PDF Reader"
     [naps2]="NAPS2"
     [onlyoffice]="OnlyOffice Desktop Editors"
     [sreda]="Сервис Среда"
     [vkmessenger]="ВК Мессенджер"
-    [yandex]="Яндекс Браузер"
     [codeblocks]="Code::Blocks"
     [eclipse-cpp]="Eclipse IDE for C/C++ Developers 2026.09"
     [eclipse-java]="Eclipse IDE for Java Developers 2026.09"
-    [idle]="IDLE 3 (Python 3.11)"
     [notepadplus]="Notepad++ 8.9.8.1"
     [pascalabc]="PascalABC.NET"
     [pycharm]="PyCharm"
@@ -313,50 +312,43 @@ declare -A PACKAGE_NAMES=(
     [python-3.12]="Python 3.12.13"
     [python-3.13]="Python 3.13.15"
     [python-3.14]="Python 3.14.7"
-    [gimp]="GIMP 3"
-    [inkscape]="InkScape"
-    [scribus]="Scribus"
-    [audacity]="Audacity"
     [obs]="OBS Studio"
-    [vlc]="VLC"
     [kumir]="КуМир 2"
-    [basic256]="Basic 256"
-    [r7-office]="R7 Office"
-    [max]="MAX"
 )
 declare -A PACKAGE_URLS=(
     [foxit]="https://easyastra.ru/store1.8/foxitreader.deb"
     [naps2]="https://easyastra.ru/store1.8/naps2.deb"
-    [onlyoffice]="https://easyastra.ru/store1.8/onlyoffice-desktopeditors.deb"
+    [onlyoffice]="https://github.com/teanrus/astra-gia/releases/download/v2.0/onlyoffice.deb"
     [sreda]="https://easyastra.ru/store1.8/sreda.deb"
-    [vkmessenger]="https://easyastra.ru/store1.8/vkmessenger.deb"
-    [yandex]="https://easyastra.ru/store1.8/Yandex.deb"
+    [vkmessenger]="https://github.com/teanrus/astra-gia/releases/download/v2.0/vk-messenger.deb"
     [codeblocks]="https://easyastra.ru/store1.8/codeblocks.deb"
     [eclipse-cpp]="https://easyastra.ru/store1.8/eclipse-cpp.deb"
     [eclipse-java]="https://easyastra.ru/store1.8/eclipse-java.deb"
-    [idle]="https://easyastra.ru/store1.8/idle-python3.11.deb"
     [notepadplus]="https://easyastra.ru/store1.8/notepadplus.deb"
     [pascalabc]="https://easyastra.ru/store1.8/pascalABC.deb"
     [pycharm]="https://easyastra.ru/store1.8/pycharm.deb"
-    [vscode]="https://easyastra.ru/store1.8/code.deb"
+    [vscode]="https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb"
     [python-3.9]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.9.25-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.10]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.10.20-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.12]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.13]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.13.15-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.14]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.14.7-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
-    [gimp]="https://easyastra.ru/store1.8/gimp3.deb"
-    [inkscape]="https://easyastra.ru/store1.8/inkscape.deb"
-    [scribus]="https://easyastra.ru/store1.8/scribus.deb"
-    [audacity]="https://easyastra.ru/store1.8/audacity.deb"
     [obs]="https://easyastra.ru/store1.8/obs-studio.deb"
-    [vlc]="https://easyastra.ru/store1.8/vlc.deb"
     [kumir]="https://easyastra.ru/store1.8/kumir2.deb"
-    [basic256]="https://easyastra.ru/store1.8/basic256.deb"
-    [r7-office]="https://easyastra.ru/store1.8/r7-office.deb"
-    [max]="https://easyastra.ru/store1.8/max.deb"
 )
 INSTALL_R7_REPO=${INSTALL_R7_REPO:-0}
 INSTALL_MAX_REPO=${INSTALL_MAX_REPO:-0}
+
+add_group_apt() {
+    local package="$1"
+    local existing_package
+    for existing_package in "${APT_PACKAGES_TO_INSTALL[@]}"; do
+        if [[ "$existing_package" == "$package" ]]; then
+            return
+        fi
+    done
+    APT_PACKAGES_TO_INSTALL+=("$package")
+}
 
 add_group_package() {
     local package_key="$1"
@@ -376,16 +368,6 @@ add_group_package() {
     NAMES_TO_DOWNLOAD+=("$name")
 }
 
-add_group_duplicate() {
-    local name="$1"
-    local url="$2"
-    local repo_flag="$3"
-    if [[ "$repo_flag" == "R7" ]]; then INSTALL_R7_REPO=1; fi
-    if [[ "$repo_flag" == "MAX" ]]; then INSTALL_MAX_REPO=1; fi
-    URLS_TO_DOWNLOAD+=("$url")
-    NAMES_TO_DOWNLOAD+=("$name")
-}
-
 # Функция для обычного .deb пакета
 ask_deb() {
 local package_key=$1
@@ -401,34 +383,32 @@ echo -e "\e[33m  -> Пропущено.\e[0m"
 fi
 }
 
-# Функция для пакетов-дубликатов (wget vs репозиторий)
-ask_duplicate() {
-local package_key=$1
-local name="${PACKAGE_NAMES[$package_key]}"
-local url="${PACKAGE_URLS[$package_key]}"
-local repo_flag=$2
-echo "--------------------------------------------------------------------------------"
-echo "Пакет [ $name ] доступен из двух источников. Выберите действие:"
-echo "  1) Скачать .deb пакет (wget)"
-echo "  2) Подключить официальный репозиторий и установить"
-echo "  3) Пропустить"
-read -p "Ваш выбор (1/2/3): " ans
-case $ans in
-1)
-URLS_TO_DOWNLOAD+=("$url")
-NAMES_TO_DOWNLOAD+=("$name (.deb)")
-echo -e "\e[32m  -> Выбран .deb пакет. Добавлено в очередь.\e[0m"
-;;
-2)
-if [ "$repo_flag" == "R7" ]; then INSTALL_R7_REPO=1; fi
-if [ "$repo_flag" == "MAX" ]; then INSTALL_MAX_REPO=1; fi
-echo -e "\e[32m  -> Выбран репозиторий. Добавлено в очередь.\e[0m"
-;;
-*)
-echo -e "\e[33m  -> Пропущено.\e[0m"
-;;
-esac
-echo "--------------------------------------------------------------------------------"
+ask_apt() {
+local package="$1"
+local name="$2"
+read -r -p "Установить [ $name ] из репозитория? (y/n): " ans
+if [[ "$ans" =~ ^[YyДд]$ ]]; then
+    add_group_apt "$package"
+    echo -e "\e[32m  -> Добавлено в очередь apt install.\e[0m"
+else
+    echo -e "\e[33m  -> Пропущено.\e[0m"
+fi
+}
+
+ask_repository_package() {
+local name="$1"
+local repo_flag="$2"
+read -r -p "Установить [ $name ] из официального репозитория? (y/n): " ans
+if [[ "$ans" =~ ^[YyДд]$ ]]; then
+    if [[ "$repo_flag" == "R7" ]]; then
+        INSTALL_R7_REPO=1
+    else
+        INSTALL_MAX_REPO=1
+    fi
+    echo -e "\e[32m  -> Добавлено в очередь установки из репозитория.\e[0m"
+else
+    echo -e "\e[33m  -> Пропущено.\e[0m"
+fi
 }
 
 # Функция для выбора версии Python
@@ -478,13 +458,13 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 ;;
             internet)
                 add_group_package vkmessenger
-                add_group_package yandex
+                add_group_apt yandex-browser-stable
                 ;;
             programming)
                 add_group_package codeblocks
                 add_group_package eclipse-cpp
                 add_group_package eclipse-java
-                add_group_package idle
+                add_group_apt idle
                 add_group_package notepadplus
                 add_group_package pascalabc
                 add_group_package pycharm
@@ -492,25 +472,22 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package python-3.12
                 ;;
             graphics)
-                add_group_package gimp
-                add_group_package inkscape
-                add_group_package scribus
-                add_group_package audacity
+                add_group_apt scribus
+                add_group_apt audacity
                 add_group_package obs
-                add_group_package vlc
                 ;;
             edu)
                 add_group_package kumir
-                add_group_package basic256
+                add_group_apt basic256
                 add_group_package codeblocks
                 add_group_package eclipse-java
-                add_group_package idle
+                add_group_apt idle
                 add_group_package notepadplus
                 add_group_package pascalabc
                 add_group_package pycharm
                 add_group_package python-3.12
                 add_group_package vscode
-                add_group_package r7-office
+                INSTALL_R7_REPO=1
                 add_group_package foxit
                 ;;
             all)
@@ -537,28 +514,25 @@ else
     ask_deb onlyoffice
     ask_deb vkmessenger
     ask_deb sreda
-    ask_deb yandex
-    ask_deb gimp
-    ask_deb inkscape
-    ask_deb scribus
-    ask_deb audacity
+    ask_apt yandex-browser-stable "Яндекс Браузер"
+    ask_apt scribus "Scribus"
+    ask_apt audacity "Audacity"
     ask_deb obs
-    ask_deb vlc
     ask_deb kumir
-    ask_deb basic256
+    ask_apt basic256 "Basic 256"
     ask_deb codeblocks
     ask_deb eclipse-cpp
     ask_deb eclipse-java
-    ask_deb idle
+    ask_apt idle "IDLE 3 (Python 3.11)"
     ask_deb notepadplus
     ask_deb pascalabc
     ask_deb pycharm
     ask_deb vscode
 
     echo ""
-    echo "=== РАЗДЕЛ 2: ПАКЕТЫ С ВЫБОРОМ ИСТОЧНИКА ==="
-    ask_duplicate r7-office R7
-    ask_duplicate max MAX
+    echo "=== РАЗДЕЛ 2: УСТАНОВКА ИЗ ОФИЦИАЛЬНЫХ РЕПОЗИТОРИЕВ ==="
+    ask_repository_package "R7 Office" R7
+    ask_repository_package "MAX" MAX
 
     echo ""
     echo "=== РАЗДЕЛ 3: СПЕЦИАЛЬНЫЕ ПАКЕТЫ ==="
@@ -578,6 +552,9 @@ if [[ $DRY_RUN -eq 1 ]]; then
     else
         echo "  - пустой список"
     fi
+    if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
+        printf '  - apt install: %s\n' "${APT_PACKAGES_TO_INSTALL[*]}"
+    fi
     if [ "$INSTALL_R7_REPO" == "1" ]; then
         echo "  - R7 Office (через репозиторий)"
     fi
@@ -589,8 +566,11 @@ fi
 
 # --- ЭТАП 1: Скачивание и установка .deb пакетов ---
 if [ ${#URLS_TO_DOWNLOAD[@]} -gt 0 ]; then
-echo "Создание временной директории..."
-mkdir -p "$PWD/tmp_deb/"
+if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$PWD/tmp_deb.XXXXXX")"; then
+    echo "Ошибка: не удалось создать папку для скачанных пакетов." >&2
+    exit 1
+fi
+echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
 echo "Загрузка: ${NAMES_TO_DOWNLOAD[$i]}..."
@@ -598,17 +578,22 @@ filename=$(basename "${URLS_TO_DOWNLOAD[$i]}" | sed 's/.*file=\(.*\.deb\).*/\1/'
 if [[ "$filename" == *"raw"* ]] || [[ -z "$filename" ]]; then
 filename="package_${i}.deb"
 fi
-wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$PWD/tmp_deb/$filename" -q --show-progress
+wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$DEB_DOWNLOAD_DIR/$filename" -q --show-progress
 done
-echo "Переход в директорию с пакетами и установка (с автоматической подгрузкой зависимостей)..."
-cd "$PWD/tmp_deb/" || exit 1
+echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
 # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-sudo apt -f -y install ./*.deb
-echo "Очистка временных файлов..."
-cd ../ || exit 1
-rm -rf "$PWD/tmp_deb/"
+sudo apt -f -y install "$DEB_DOWNLOAD_DIR"/*.deb
 else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
+fi
+
+# --- ЭТАП 2: Установка пакетов из репозитория ---
+if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
+    echo "Установка выбранных пакетов из репозитория..."
+    if ! sudo apt install -y "${APT_PACKAGES_TO_INSTALL[@]}"; then
+        echo "Ошибка: не удалось установить выбранные пакеты из репозитория." >&2
+        exit 1
+    fi
 fi
 
 # --- ЭТАП 2: Установка R7 Office через репозиторий (если выбрано) ---
@@ -643,6 +628,26 @@ fi
 echo "Восстановление CD-ROM репозитория..."
 sudo sed -i '/cdrom:/ s/^#//' /etc/apt/sources.list
 sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^#//' {} \; 2>/dev/null
+
+# --- Очистка или сохранение скачанных .deb пакетов ---
+if [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
+    if [[ -t 0 ]]; then
+        read -r -p "Оставить скачанные .deb-пакеты для дальнейшего использования? (y/n): " keep_debs
+    else
+        keep_debs="n"
+    fi
+
+    if [[ "$keep_debs" =~ ^[YyДд]$ ]]; then
+        echo "Скачанные .deb-пакеты сохранены в: $DEB_DOWNLOAD_DIR"
+    else
+        if rm -rf -- "$DEB_DOWNLOAD_DIR"; then
+            echo "Скачанные .deb-пакеты удалены."
+        else
+            echo "Ошибка: не удалось удалить каталог со скачанными пакетами: $DEB_DOWNLOAD_DIR" >&2
+            exit 1
+        fi
+    fi
+fi
 
 # --- Завершение ---
 #clear
