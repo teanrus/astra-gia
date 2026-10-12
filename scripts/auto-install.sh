@@ -299,7 +299,7 @@ else
 
     echo "Проверка и исправление состояния пакетной базы (fix-broken)..."
     sudo apt-get clean
-    sudo apt-get --fix-broken install -y
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get --fix-broken install -y
 
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
     sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
@@ -346,7 +346,7 @@ else
     fi
 
     echo "Установка подсистемы сканирования SANE..."
-    if ! sudo apt-get install -y sane sane-utils; then
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y sane sane-utils; then
         echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
         exit 1
     fi
@@ -649,7 +649,7 @@ fi
 done
 echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
 # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-sudo apt-get -f -y install "$DEB_DOWNLOAD_DIR"/*.deb
+sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "$DEB_DOWNLOAD_DIR"/*.deb
 else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
 fi
@@ -657,7 +657,7 @@ fi
 # --- ЭТАП 2: Установка пакетов из репозитория ---
 if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
     echo "Установка выбранных пакетов из репозитория..."
-    if ! sudo apt-get install -y "${APT_PACKAGES_TO_INSTALL[@]}"; then
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "${APT_PACKAGES_TO_INSTALL[@]}"; then
         echo "Ошибка: не удалось установить выбранные пакеты из репозитория." >&2
         exit 1
     fi
@@ -677,7 +677,7 @@ sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
 # Правильная строка репозитория с кодовым именем 'astralinux'
 echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
 sudo apt-get update
-sudo apt-get install -y r7-office
+sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y r7-office
 fi
 
 # --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
@@ -687,7 +687,7 @@ sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/max.list
 sudo apt-get update
-sudo apt-get install -y max
+sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y max
 apt-cache policy max
 fi
 
