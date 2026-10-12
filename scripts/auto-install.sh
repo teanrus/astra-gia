@@ -175,11 +175,8 @@ if [[ $SAVE_LOG -eq 1 ]]; then
 fi
 
 echo "==============================================================================="
-echo " "
-echo "R.Tyan (c) 2026 | tyanrv@lbt.yanao.ru"
-echo " "
 echo "Интерактивный скрипт автоматизации установки ПО для ALSE 1.8"
-echo " "
+echo "R.Tyan (c) 2026 | tyanrv@lbt.yanao.ru"
 echo "================================================================================"
 
 if [[ $AUTO_MODE -eq 0 ]]; then
@@ -378,7 +375,7 @@ declare -A PACKAGE_NAMES=(
 )
 declare -A PACKAGE_URLS=(
     [foxit]="https://easyastra.ru/store1.8/foxitreader.deb"
-    [naps2]="https://easyastra.ru/store1.8/naps2.deb"
+    [naps2]="https://github.com/teanrus/astra-gia/releases/download/v2.0/naps2.deb"
     [onlyoffice]="https://github.com/teanrus/astra-gia/releases/download/v2.0/onlyoffice.deb"
     [sreda]="https://github.com/teanrus/astra-gia/releases/download/v2.0/sreda.deb"
     [vkmessenger]="https://github.com/teanrus/astra-gia/releases/download/v2.0/vk-messenger.deb"
