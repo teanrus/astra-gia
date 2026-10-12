@@ -232,6 +232,63 @@ else
     esac
 fi
 
+deduplicate_apt_sources() {
+    local apt_dir="${1:-/etc/apt}"
+    sudo bash -s -- "$apt_dir" <<'ROOT_SCRIPT'
+set -euo pipefail
+shopt -s nullglob
+apt_dir="$1"
+source_files=("$apt_dir/sources.list" "$apt_dir"/sources.list.d/*.list)
+declare -A seen_entries=()
+declare -A processed_files=()
+duplicates_removed=0
+
+for source_path in "${source_files[@]}"; do
+    [[ -f "$source_path" ]] || continue
+    source_file=$(readlink -f -- "$source_path")
+    [[ ! ${processed_files["$source_file"]+present} ]] || continue
+    processed_files["$source_file"]=1
+    temp_file=$(mktemp "${source_file}.XXXXXX")
+    cp -p "$source_file" "$temp_file"
+    : > "$temp_file"
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^[[:space:]]*deb(-src)?[[:space:]] ]]; then
+            read -r -a fields <<< "$line"
+            normalized_line=""
+            for field in "${fields[@]}"; do
+                [[ "$field" == \#* ]] && break
+                if [[ "$field" =~ ^https?:// ]]; then
+                    while [[ "$field" == */ ]]; do
+                        field="${field%/}"
+                    done
+                fi
+                normalized_line+="${field} "
+            done
+            normalized_line="${normalized_line% }"
+
+            if [[ -n "$normalized_line" && ${seen_entries["$normalized_line"]+present} ]]; then
+                duplicates_removed=$((duplicates_removed + 1))
+                continue
+            fi
+            if [[ -n "$normalized_line" ]]; then
+                seen_entries["$normalized_line"]=1
+            fi
+        fi
+        printf '%s\n' "$line" >> "$temp_file"
+    done < "$source_file"
+
+    if cmp -s "$source_file" "$temp_file"; then
+        rm -f "$temp_file"
+    else
+        mv "$temp_file" "$source_file"
+    fi
+done
+
+printf 'Удалено дублирующихся записей APT: %s\n' "$duplicates_removed"
+ROOT_SCRIPT
+}
+
 # --- БЛОК ПОДГОТОВКИ СИСТЕМЫ (РЕШАЕТ ПРОБЛЕМУ С DVD И СЛОМАННЫМИ ПАКЕТАМИ) ---
 if [[ $DRY_RUN -eq 1 ]]; then
     echo "DRY-RUN: пропускаем отключение CD-ROM, подготовку apt-репозиториев, установку SANE и обновление системы."
@@ -241,8 +298,8 @@ else
     sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \; 2>/dev/null
 
     echo "Проверка и исправление состояния пакетной базы (fix-broken)..."
-    sudo apt clean
-    sudo apt --fix-broken install -y
+    sudo apt-get clean
+    sudo apt-get --fix-broken install -y
 
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
     sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
@@ -253,21 +310,27 @@ else
         echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
     fi
 
+    echo "Проверка конфигурации на дублирующиеся APT-репозитории..."
+    if ! deduplicate_apt_sources; then
+        echo "Ошибка: не удалось проверить и исправить дублирующиеся APT-репозитории." >&2
+        exit 1
+    fi
+
     if [[ $AUTO_MODE -eq 0 ]]; then
         read -r -p "Выполнить обновление системы и очистку пакетов (dist-upgrade, autoremove, autoclean)? (y/n): " upgrade_ans
         if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
             echo "Обновление системы..."
-            if ! sudo apt dist-upgrade -y; then
+            if ! sudo apt-get dist-upgrade -y; then
                 echo "Ошибка: не удалось выполнить dist-upgrade." >&2
                 exit 1
             fi
             echo "Удаление неиспользуемых пакетов..."
-            if ! sudo apt autoremove -y; then
+            if ! sudo apt-get autoremove -y; then
                 echo "Ошибка: не удалось выполнить autoremove." >&2
                 exit 1
             fi
             echo "Очистка локального кэша пакетов..."
-            if ! sudo apt autoclean; then
+            if ! sudo apt-get autoclean; then
                 echo "Ошибка: не удалось выполнить autoclean." >&2
                 exit 1
             fi
@@ -277,13 +340,13 @@ else
     fi
 
     echo "Обновление списков пакетов (это может занять некоторое время)..."
-    if ! sudo apt update; then
+    if ! sudo apt-get update; then
         echo "Ошибка: не удалось обновить списки пакетов." >&2
         exit 1
     fi
 
     echo "Установка подсистемы сканирования SANE..."
-    if ! sudo apt install -y sane sane-utils; then
+    if ! sudo apt-get install -y sane sane-utils; then
         echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
         exit 1
     fi
@@ -578,11 +641,15 @@ filename=$(basename "${URLS_TO_DOWNLOAD[$i]}" | sed 's/.*file=\(.*\.deb\).*/\1/'
 if [[ "$filename" == *"raw"* ]] || [[ -z "$filename" ]]; then
 filename="package_${i}.deb"
 fi
-wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$DEB_DOWNLOAD_DIR/$filename" -q --show-progress
+if ! wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$DEB_DOWNLOAD_DIR/$filename" \
+    -q --show-progress --progress=bar:force:noscroll; then
+    echo "Ошибка: не удалось скачать пакет «${NAMES_TO_DOWNLOAD[$i]}»." >&2
+    exit 1
+fi
 done
 echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
 # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-sudo apt -f -y install "$DEB_DOWNLOAD_DIR"/*.deb
+sudo apt-get -f -y install "$DEB_DOWNLOAD_DIR"/*.deb
 else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
 fi
@@ -590,7 +657,7 @@ fi
 # --- ЭТАП 2: Установка пакетов из репозитория ---
 if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
     echo "Установка выбранных пакетов из репозитория..."
-    if ! sudo apt install -y "${APT_PACKAGES_TO_INSTALL[@]}"; then
+    if ! sudo apt-get install -y "${APT_PACKAGES_TO_INSTALL[@]}"; then
         echo "Ошибка: не удалось установить выбранные пакеты из репозитория." >&2
         exit 1
     fi
@@ -609,8 +676,8 @@ EOF
 sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
 # Правильная строка репозитория с кодовым именем 'astralinux'
 echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
-sudo apt update
-sudo apt install -y r7-office
+sudo apt-get update
+sudo apt-get install -y r7-office
 fi
 
 # --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
@@ -619,9 +686,9 @@ echo "Настройка репозитория и установка MAX..."
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/max.list
-sudo apt update
-sudo apt install -y max
-apt policy max
+sudo apt-get update
+sudo apt-get install -y max
+apt-cache policy max
 fi
 
 # --- Восстановление CD-ROM репозитория после завершения операций ---
