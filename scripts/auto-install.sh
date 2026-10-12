@@ -635,6 +635,22 @@ if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$PWD/tmp_deb.XXXXXX")"; then
 fi
 echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
+RELEASE_ASSET_PREFIX="https://github.com/teanrus/astra-gia/releases/download/v2.0/"
+RELEASE_CHECKSUMS_FILE="$DEB_DOWNLOAD_DIR/SHA256SUMS"
+has_release_packages=0
+for package_url in "${URLS_TO_DOWNLOAD[@]}"; do
+    if [[ "$package_url" == "$RELEASE_ASSET_PREFIX"* ]]; then
+        has_release_packages=1
+        break
+    fi
+done
+if [[ $has_release_packages -eq 1 ]]; then
+    echo "Загрузка контрольных сумм пакетов релиза v2.0..."
+    if ! wget -q "$RELEASE_ASSET_PREFIX"SHA256SUMS -O "$RELEASE_CHECKSUMS_FILE"; then
+        echo "Ошибка: не удалось получить контрольные суммы релиза v2.0." >&2
+        exit 1
+    fi
+fi
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
 echo "Загрузка: ${NAMES_TO_DOWNLOAD[$i]}..."
 filename=$(basename "${URLS_TO_DOWNLOAD[$i]}" | sed 's/.*file=\(.*\.deb\).*/\1/')
@@ -645,6 +661,21 @@ if ! wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$DEB_DOWNLOAD_DIR
     -q --show-progress --progress=bar:force:noscroll; then
     echo "Ошибка: не удалось скачать пакет «${NAMES_TO_DOWNLOAD[$i]}»." >&2
     exit 1
+fi
+if [[ "${URLS_TO_DOWNLOAD[$i]}" == "$RELEASE_ASSET_PREFIX"* ]]; then
+    expected_checksum=$(awk -v filename="$filename" '$2 == filename { print $1; count++ } END { if (count != 1) exit 1 }' "$RELEASE_CHECKSUMS_FILE") || {
+        echo "Ошибка: для пакета «${NAMES_TO_DOWNLOAD[$i]}» нет единственной контрольной суммы в SHA256SUMS." >&2
+        exit 1
+    }
+    if [[ ! "$expected_checksum" =~ ^[[:xdigit:]]{64}$ ]]; then
+        echo "Ошибка: некорректная SHA-256 контрольная сумма пакета «${NAMES_TO_DOWNLOAD[$i]}»." >&2
+        exit 1
+    fi
+    if ! printf '%s  %s\n' "$expected_checksum" "$DEB_DOWNLOAD_DIR/$filename" | sha256sum --check --status; then
+        echo "Ошибка: SHA-256 проверка пакета «${NAMES_TO_DOWNLOAD[$i]}» не пройдена." >&2
+        exit 1
+    fi
+    echo "Контрольная сумма проверена: ${NAMES_TO_DOWNLOAD[$i]}"
 fi
 done
 echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
