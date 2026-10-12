@@ -32,15 +32,15 @@
 | :--- | :--- | :--- | :--- | :--- |
 | Python | 3.X.X | Высокоуровневый язык программирования общего назначения, который отличается простотой, читаемостью кода и универсальностью | [python.org](https://python.org/) | выбор версии: 3.9.25, 3.10.20, 3.12.13, 3.13.15, 3.14.7 |
 | IDLE 3 | 3.11.2 | Интегрированная среда разработки и обучения на языке Python, созданная с помощью библиотеки Tkinter | [python.org](https://www.python.org/) | пакет `idle` из Frozen |
-| PyCharm | 2026.2.1 | Кроссплатформенная интегрированная среда разработки для языка программирования Python, созданная компанией JetBrains | [jetbrains.com](https://jetbrains.com/pycharm) |  |
+| PyCharm | 2026.2.1 | Кроссплатформенная интегрированная среда разработки для языка программирования Python, созданная компанией JetBrains | [jetbrains.com](https://jetbrains.com/pycharm) | |
 | Visual Studio Code | 1.140.0 | Текстовый редактор, разработанный Microsoft. Позиционируется, как «лёгкий» редактор кода для кроссплатформенной разработки | [code.visualstudio.com](https://code.visualstudio.com/) | .deb из релиза v2.0 |
-| Eclipse IDE for C/C++ Developers | 2026.09 | Среда разработки Eclipse для работы с проектами на C и C++ | [eclipse.org](https://www.eclipse.org/) |  |
-| Eclipse IDE for Java Developers | 2026.09 | Среда разработки Eclipse для работы с проектами на Java | [eclipse.org](https://www.eclipse.org/) |  |
-| Notepad++ | 8.9.8.1 | Свободный текстовый редактор с открытым исходным кодом с подсветкой синтаксиса, разметки и прочего | [notepad-plus-plus.org](https://notepad-plus-plus.org/) |  |
-| PascalABC.NET | 4.0.1 | Язык программирования Паскаль, включающий классический Паскаль, большинство возможностей языка Delphi | [pascalabc.net](https://pascalabc.net/) |  |
-| КуМир 2 | 2.1.0 (rc11) | Язык и система программирования, предназначенная для поддержки начальных курсов информатики | [niisi.ru/kumir](https://niisi.ru/kumir/) |  |
+| Eclipse IDE for C/C++ Developers | 2026.09 | Среда разработки Eclipse для работы с проектами на C и C++ | [eclipse.org](https://www.eclipse.org/) | |
+| Eclipse IDE for Java Developers | 2026.09 | Среда разработки Eclipse для работы с проектами на Java | [eclipse.org](https://www.eclipse.org/) | |
+| Notepad++ | 8.9.8.1 | Свободный текстовый редактор с открытым исходным кодом с подсветкой синтаксиса, разметки и прочего | [notepad-plus-plus.org](https://notepad-plus-plus.org/) | |
+| PascalABC.NET | 4.0.1 | Язык программирования Паскаль, включающий классический Паскаль, большинство возможностей языка Delphi | [pascalabc.net](https://pascalabc.net/) | |
+| КуМир 2 | 2.1.0 (rc11) | Язык и система программирования, предназначенная для поддержки начальных курсов информатики | [niisi.ru/kumir](https://niisi.ru/kumir/) | |
 | Basic 256 | 2.0.99.10 | Открытая реализация языка программирования basic и среда разработки под него | [basic256.org](https://basic256.org/) | пакет `basic256` из Frozen |
-| Code::Blocks | 25.03 | Свободная кроссплатформенная среда разработки, поддерживает C, C++, D (с ограничениями) и Fortran | [codeblocks.org](https://codeblocks.org/) |  |
+| Code::Blocks | 25.03 | Свободная кроссплатформенная среда разработки, поддерживает C, C++, D (с ограничениями) и Fortran | [codeblocks.org](https://codeblocks.org/) | |
 
 ### 🎨 Графика, медиа и утилиты
 
@@ -48,7 +48,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | Scribus | 1.6.4 | Бесплатное и свободное приложение с открытым исходным кодом для издательского дела — визуальной вёрстки документов, подготовка к печати | [scribus.net](https://scribus.net/) | пакет `scribus` из Frozen |
 | Audacity | 3.7.1 | Свободный многоплатформенный аудиоредактор звуковых файлов, работающий с несколькими дорожками | [audacityteam.org](https://audacityteam.org/) | пакет `audacity` из Frozen |
-| OBS Studio | 31.0.1 | Программа для записи видео и потокового вещания, разрабатываемая проектом OBS и сообществом независимых разработчиков | [obsproject.com](https://obsproject.com/) |  |
+| OBS Studio | 31.0.1 | Программа для записи видео и потокового вещания, разрабатываемая проектом OBS и сообществом независимых разработчиков | [obsproject.com](https://obsproject.com/) | |
 | NAPS2 | 7.5.3 | Бесплатная и свободная утилита для сканирования документов и сохранения в PDF, TIFF, JPEG или PNG в один клик | [naps2.com](https://naps2.com/) | сканирование |
 
 ### 🧭 Новые CLI-режимы
