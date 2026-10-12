@@ -340,10 +340,21 @@ else
         exit 1
     fi
 
-    echo "Установка подсистемы сканирования SANE..."
-    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y sane sane-utils; then
-        echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
-        exit 1
+    install_sane=1
+    if [[ $AUTO_MODE -eq 0 ]]; then
+        read -r -p "Установить подсистему сканирования SANE (sane, sane-utils)? (y/n): " sane_ans
+        if [[ ! "$sane_ans" =~ ^[YyДд]$ ]]; then
+            install_sane=0
+            echo "Установка SANE пропущена."
+        fi
+    fi
+
+    if [[ $install_sane -eq 1 ]]; then
+        echo "Установка подсистемы сканирования SANE..."
+        if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y sane sane-utils; then
+            echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
+            exit 1
+        fi
     fi
 fi
 # -----------------------------------------------------------------------------
@@ -374,25 +385,25 @@ declare -A PACKAGE_NAMES=(
     [kumir]="КуМир 2"
 )
 declare -A PACKAGE_URLS=(
-    [foxit]="https://easyastra.ru/store1.8/foxitreader.deb"
+    [foxit]="https://github.com/teanrus/astra-gia/releases/download/v2.0/foxitreader.deb"
     [naps2]="https://github.com/teanrus/astra-gia/releases/download/v2.0/naps2.deb"
     [onlyoffice]="https://github.com/teanrus/astra-gia/releases/download/v2.0/onlyoffice.deb"
     [sreda]="https://github.com/teanrus/astra-gia/releases/download/v2.0/sreda.deb"
     [vkmessenger]="https://github.com/teanrus/astra-gia/releases/download/v2.0/vk-messenger.deb"
-    [codeblocks]="https://easyastra.ru/store1.8/codeblocks.deb"
-    [eclipse-cpp]="https://easyastra.ru/store1.8/eclipse-cpp.deb"
-    [eclipse-java]="https://easyastra.ru/store1.8/eclipse-java.deb"
-    [notepadplus]="https://easyastra.ru/store1.8/notepadplus.deb"
-    [pascalabc]="https://easyastra.ru/store1.8/pascalABC.deb"
-    [pycharm]="https://easyastra.ru/store1.8/pycharm.deb"
+    [codeblocks]="https://github.com/teanrus/astra-gia/releases/download/v2.0/codeblocks.deb"
+    [eclipse-cpp]="https://github.com/teanrus/astra-gia/releases/download/v2.0/eclipse-cpp.deb"
+    [eclipse-java]="https://github.com/teanrus/astra-gia/releases/download/v2.0/eclipse-java.deb"
+    [notepadplus]="https://github.com/teanrus/astra-gia/releases/download/v2.0/notepadplus.deb"
+    [pascalabc]="https://github.com/teanrus/astra-gia/releases/download/v2.0/pascalABC.deb"
+    [pycharm]="https://github.com/teanrus/astra-gia/releases/download/v2.0/pycharm.deb"
     [vscode]="https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb"
     [python-3.9]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.9.25-alse1.8-amd64.deb"
     [python-3.10]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.10.20-alse1.8-amd64.deb"
     [python-3.12]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.12.13-alse1.8-amd64.deb"
     [python-3.13]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.13.15-alse1.8-amd64.deb"
     [python-3.14]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.14.7-alse1.8-amd64.deb"
-    [obs]="https://easyastra.ru/store1.8/obs-studio.deb"
-    [kumir]="https://easyastra.ru/store1.8/kumir2.deb"
+    [obs]="https://github.com/teanrus/astra-gia/releases/download/v2.0/obs-studio.deb"
+    [kumir]="https://github.com/teanrus/astra-gia/releases/download/v2.0/kumir2.deb"
 )
 INSTALL_R7_REPO=${INSTALL_R7_REPO:-0}
 INSTALL_MAX_REPO=${INSTALL_MAX_REPO:-0}
@@ -614,10 +625,10 @@ if [[ $DRY_RUN -eq 1 ]]; then
         printf '  - apt install: %s\n' "${APT_PACKAGES_TO_INSTALL[*]}"
     fi
     if [ "$INSTALL_R7_REPO" == "1" ]; then
-        echo "  - R7 Office (через репозиторий)"
+        echo "  - R7 Office"
     fi
     if [ "$INSTALL_MAX_REPO" == "1" ]; then
-        echo "  - MAX (через репозиторий)"
+        echo "  - MAX"
     fi
     exit 0
 fi
@@ -628,6 +639,37 @@ if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$PWD/tmp_deb.XXXXXX")"; then
     echo "Ошибка: не удалось создать папку для скачанных пакетов." >&2
     exit 1
 fi
+
+handle_checksum_failure() {
+    local package_name="$1"
+    local package_file="$2"
+    local checksum_file="$3"
+    local action
+
+    echo "Предупреждение: проверка контрольной суммы пакета «$package_name» не пройдена." >&2
+    if [[ ! -t 0 ]]; then
+        echo "Нет интерактивного ввода для выбора действия. Установка отменена." >&2
+        return 1
+    fi
+
+    if ! read -r -p "Пропустить этот пакет и продолжить со следующим? (y/n): " action; then
+        echo "Не удалось получить ответ. Установка отменена." >&2
+        return 1
+    fi
+    if [[ ! "$action" =~ ^[YyДд]$ ]]; then
+        echo "Установка отменена по выбору пользователя." >&2
+        return 1
+    fi
+
+    if ! rm -f -- "$package_file" "$checksum_file"; then
+        echo "Ошибка: не удалось удалить непроверенный пакет «$package_name»." >&2
+        return 1
+    fi
+    echo "Пакет «$package_name» пропущен. Переход к следующему пакету."
+    return 0
+}
+
+declare -a DEB_FILES_TO_INSTALL=()
 echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
 RELEASE_ASSET_PREFIX="https://github.com/teanrus/astra-gia/releases/download/v2.0/"
@@ -645,27 +687,40 @@ fi
 if [[ "${URLS_TO_DOWNLOAD[$i]}" == "$RELEASE_ASSET_PREFIX"* ]]; then
     checksum_file="$DEB_DOWNLOAD_DIR/$filename.sha256"
     if ! wget -q "${URLS_TO_DOWNLOAD[$i]}.sha256" -O "$checksum_file"; then
-        echo "Ошибка: не удалось загрузить контрольную сумму пакета «${NAMES_TO_DOWNLOAD[$i]}»." >&2
+        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
+            continue
+        fi
         exit 1
     fi
     expected_checksum=$(awk -v filename="$filename" '$2 == filename || $2 == "*" filename { print $1; count++ } END { if (count != 1) exit 1 }' "$checksum_file") || {
-        echo "Ошибка: контрольная сумма для пакета «${NAMES_TO_DOWNLOAD[$i]}» имеет неверный формат." >&2
+        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
+            continue
+        fi
         exit 1
     }
     if [[ ! "$expected_checksum" =~ ^[[:xdigit:]]{64}$ ]]; then
-        echo "Ошибка: некорректная SHA-256 контрольная сумма пакета «${NAMES_TO_DOWNLOAD[$i]}»." >&2
+        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
+            continue
+        fi
         exit 1
     fi
     if ! printf '%s  %s\n' "$expected_checksum" "$DEB_DOWNLOAD_DIR/$filename" | sha256sum --check --status; then
-        echo "Ошибка: SHA-256 проверка пакета «${NAMES_TO_DOWNLOAD[$i]}» не пройдена." >&2
+        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
+            continue
+        fi
         exit 1
     fi
     echo "Контрольная сумма проверена: ${NAMES_TO_DOWNLOAD[$i]}"
 fi
+DEB_FILES_TO_INSTALL+=("$DEB_DOWNLOAD_DIR/$filename")
 done
-echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
-# Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "$DEB_DOWNLOAD_DIR"/*.deb
+if [[ ${#DEB_FILES_TO_INSTALL[@]} -gt 0 ]]; then
+    echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
+    # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[@]}"
+else
+    echo "Нет пакетов для установки: все выбранные пакеты были пропущены."
+fi
 else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
 fi
