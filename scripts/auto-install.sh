@@ -59,12 +59,9 @@ print_package_list() {
   - Python 3.12.13
 
 [graphics]
-  - GIMP 3
-  - InkScape
   - Scribus
   - Audacity
   - OBS Studio
-  - VLC
 
 [edu]
   - КуМир 2
@@ -216,12 +213,12 @@ if [[ $DRY_RUN -eq 1 ]]; then
     echo "Режим dry-run активирован. Изменения в системных репозиториях и установка пакетов будут пропущены."
 else
     case "$NUMBER" in
-        1)
+        1|frozen)
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
             echo "Выбрана ветка Frozen для 1.8.4.48. Продолжаем настройку системы..."
             ;;
-        2)
+        2|stable)
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
             echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
             echo "Выбрана ветка Stable для 1.8. Продолжаем настройку системы..."
@@ -256,36 +253,32 @@ else
         echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
     fi
 
+    echo "Обновление системы..."
+    if ! sudo apt dist-upgrade -y; then
+        echo "Ошибка: не удалось выполнить dist-upgrade." >&2
+        exit 1
+    fi
+    echo "Удаление неиспользуемых пакетов..."
+    if ! sudo apt autoremove -y; then
+        echo "Ошибка: не удалось выполнить autoremove." >&2
+        exit 1
+    fi
+    echo "Очистка локального кэша пакетов..."
+    if ! sudo apt autoclean; then
+        echo "Ошибка: не удалось выполнить autoclean." >&2
+        exit 1
+    fi
+
     echo "Обновление списков пакетов (это может занять некоторое время)..."
-    sudo apt update
+    if ! sudo apt update; then
+        echo "Ошибка: не удалось обновить списки пакетов." >&2
+        exit 1
+    fi
 
     echo "Установка подсистемы сканирования SANE..."
     if ! sudo apt install -y sane sane-utils; then
         echo "Ошибка: не удалось установить подсистему сканирования SANE." >&2
         exit 1
-    fi
-
-    if [[ $AUTO_MODE -eq 0 ]]; then
-        read -r -p "Выполнить обновление системы и очистку пакетов (dist-upgrade, autoremove, autoclean)? (y/n): " upgrade_ans
-        if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
-            echo "Обновление системы..."
-            if ! sudo apt dist-upgrade -y; then
-                echo "Ошибка: не удалось выполнить dist-upgrade." >&2
-                exit 1
-            fi
-            echo "Удаление неиспользуемых пакетов..."
-            if ! sudo apt autoremove -y; then
-                echo "Ошибка: не удалось выполнить autoremove." >&2
-                exit 1
-            fi
-            echo "Очистка локального кэша пакетов..."
-            if ! sudo apt autoclean; then
-                echo "Ошибка: не удалось выполнить autoclean." >&2
-                exit 1
-            fi
-        else
-            echo "Обновление и очистка пакетов пропущены."
-        fi
     fi
 fi
 # -----------------------------------------------------------------------------
@@ -313,57 +306,69 @@ declare -A PACKAGE_NAMES=(
     [python-3.12]="Python 3.12.13"
     [python-3.13]="Python 3.13.15"
     [python-3.14]="Python 3.14.7"
-    [gimp]="GIMP 3"
-    [inkscape]="InkScape"
     [scribus]="Scribus"
     [audacity]="Audacity"
     [obs]="OBS Studio"
-    [vlc]="VLC"
     [kumir]="КуМир 2"
     [basic256]="Basic 256"
     [r7-office]="R7 Office"
     [max]="MAX"
 )
+declare -A APT_PACKAGE_NAMES=(
+    [yandex]="yandex-browser-stable"
+    [idle]="idle"
+    [basic256]="basic256"
+    [scribus]="scribus"
+    [audacity]="audacity"
+)
 declare -A PACKAGE_URLS=(
     [foxit]="https://easyastra.ru/store1.8/foxitreader.deb"
     [naps2]="https://easyastra.ru/store1.8/naps2.deb"
-    [onlyoffice]="https://easyastra.ru/store1.8/onlyoffice-desktopeditors.deb"
+    [onlyoffice]="https://github.com/teanrus/astra-gia/releases/download/v2.0/onlyoffice.deb"
     [sreda]="https://easyastra.ru/store1.8/sreda.deb"
-    [vkmessenger]="https://easyastra.ru/store1.8/vkmessenger.deb"
-    [yandex]="https://easyastra.ru/store1.8/Yandex.deb"
+    [vkmessenger]="https://github.com/teanrus/astra-gia/releases/download/v2.0/vk-messenger.deb"
     [codeblocks]="https://easyastra.ru/store1.8/codeblocks.deb"
     [eclipse-cpp]="https://easyastra.ru/store1.8/eclipse-cpp.deb"
     [eclipse-java]="https://easyastra.ru/store1.8/eclipse-java.deb"
-    [idle]="https://easyastra.ru/store1.8/idle-python3.11.deb"
     [notepadplus]="https://easyastra.ru/store1.8/notepadplus.deb"
     [pascalabc]="https://easyastra.ru/store1.8/pascalABC.deb"
     [pycharm]="https://easyastra.ru/store1.8/pycharm.deb"
-    [vscode]="https://easyastra.ru/store1.8/code.deb"
+    [vscode]="https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb"
     [python-3.9]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.9.25-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.10]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.10.20-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.12]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.12.13-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.13]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.13.15-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
     [python-3.14]="https://gitflic.ru/project/ddavydov/python3-alse-18/blob/raw?file=python-3.14.7-alse1.8-amd64.deb&inline=false&commit=2285a97abf5fbd7dcd869df45c61228618bbf6f6"
-    [gimp]="https://easyastra.ru/store1.8/gimp3.deb"
-    [inkscape]="https://easyastra.ru/store1.8/inkscape.deb"
-    [scribus]="https://easyastra.ru/store1.8/scribus.deb"
-    [audacity]="https://easyastra.ru/store1.8/audacity.deb"
     [obs]="https://easyastra.ru/store1.8/obs-studio.deb"
-    [vlc]="https://easyastra.ru/store1.8/vlc.deb"
     [kumir]="https://easyastra.ru/store1.8/kumir2.deb"
-    [basic256]="https://easyastra.ru/store1.8/basic256.deb"
-    [r7-office]="https://easyastra.ru/store1.8/r7-office.deb"
+    [r7-office]="https://github.com/teanrus/astra-gia/releases/download/v2.0/r7-office.deb"
     [max]="https://easyastra.ru/store1.8/max.deb"
 )
+declare -a APT_PACKAGES_TO_INSTALL
 INSTALL_R7_REPO=${INSTALL_R7_REPO:-0}
 INSTALL_MAX_REPO=${INSTALL_MAX_REPO:-0}
 
 add_group_package() {
     local package_key="$1"
     local name="${PACKAGE_NAMES[$package_key]:-}"
+    local apt_package="${APT_PACKAGE_NAMES[$package_key]:-}"
     local url="${PACKAGE_URLS[$package_key]:-}"
     local existing_url
-    if [[ -z "$name" || -z "$url" ]]; then
+    if [[ -z "$name" ]]; then
+        echo "Ошибка: неизвестный ключ пакета: $package_key" >&2
+        return 1
+    fi
+    if [[ -n "$apt_package" ]]; then
+        for existing_url in "${APT_PACKAGES_TO_INSTALL[@]}"; do
+            if [[ "$existing_url" == "$apt_package" ]]; then
+                return
+            fi
+        done
+        APT_PACKAGES_TO_INSTALL+=("$apt_package")
+        echo -e "\e[32m  -> $name добавлен в очередь apt install.\e[0m"
+        return
+    fi
+    if [[ -z "$url" ]]; then
         echo "Ошибка: неизвестный ключ пакета: $package_key" >&2
         return 1
     fi
@@ -396,6 +401,19 @@ if [[ "$ans" =~ ^[YyДд]$ ]]; then
 URLS_TO_DOWNLOAD+=("$url")
 NAMES_TO_DOWNLOAD+=("$name")
 echo -e "\e[32m  -> Добавлено в очередь на скачивание.\e[0m"
+else
+echo -e "\e[33m  -> Пропущено.\e[0m"
+fi
+}
+
+ask_apt_package() {
+local package_key=$1
+local name="${PACKAGE_NAMES[$package_key]}"
+local apt_package="${APT_PACKAGE_NAMES[$package_key]}"
+read -p "Установить [ $name ]? (y/n): " ans
+if [[ "$ans" =~ ^[YyДд]$ ]]; then
+APT_PACKAGES_TO_INSTALL+=("$apt_package")
+echo -e "\e[32m  -> Добавлено в очередь apt install.\e[0m"
 else
 echo -e "\e[33m  -> Пропущено.\e[0m"
 fi
@@ -492,12 +510,9 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package python-3.12
                 ;;
             graphics)
-                add_group_package gimp
-                add_group_package inkscape
                 add_group_package scribus
                 add_group_package audacity
                 add_group_package obs
-                add_group_package vlc
                 ;;
             edu)
                 add_group_package kumir
@@ -537,19 +552,16 @@ else
     ask_deb onlyoffice
     ask_deb vkmessenger
     ask_deb sreda
-    ask_deb yandex
-    ask_deb gimp
-    ask_deb inkscape
-    ask_deb scribus
-    ask_deb audacity
+    ask_apt_package yandex
+    ask_apt_package scribus
+    ask_apt_package audacity
     ask_deb obs
-    ask_deb vlc
     ask_deb kumir
-    ask_deb basic256
+    ask_apt_package basic256
     ask_deb codeblocks
     ask_deb eclipse-cpp
     ask_deb eclipse-java
-    ask_deb idle
+    ask_apt_package idle
     ask_deb notepadplus
     ask_deb pascalabc
     ask_deb pycharm
@@ -577,6 +589,9 @@ if [[ $DRY_RUN -eq 1 ]]; then
         done
     else
         echo "  - пустой список"
+    fi
+    if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
+        printf '  - apt install: %s\n' "${APT_PACKAGES_TO_INSTALL[*]}"
     fi
     if [ "$INSTALL_R7_REPO" == "1" ]; then
         echo "  - R7 Office (через репозиторий)"
@@ -611,7 +626,16 @@ else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
 fi
 
-# --- ЭТАП 2: Установка R7 Office через репозиторий (если выбрано) ---
+# --- ЭТАП 2: Установка пакетов из репозитория ---
+if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
+    echo "Установка выбранных пакетов из репозитория..."
+    if ! sudo apt install -y "${APT_PACKAGES_TO_INSTALL[@]}"; then
+        echo "Ошибка: не удалось установить пакеты из репозитория." >&2
+        exit 1
+    fi
+fi
+
+# --- ЭТАП 3: Установка R7 Office через репозиторий (если выбрано) ---
 if [ "$INSTALL_R7_REPO" == "1" ]; then
 echo "Настройка репозитория и установка R7 Office..."
 sudo wget -qO /etc/apt/trusted.gpg.d/r7-office.asc https://download.r7-office.ru/repos/RPM-GPG-KEY-R7-OFFICE.public
@@ -628,7 +652,7 @@ sudo apt update
 sudo apt install -y r7-office
 fi
 
-# --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
+# --- ЭТАП 4: Установка MAX через репозиторий (если выбрано) ---
 if [ "$INSTALL_MAX_REPO" == "1" ]; then
 echo "Настройка репозитория и установка MAX..."
 sudo mkdir -p /etc/apt/keyrings
