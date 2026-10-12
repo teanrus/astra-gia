@@ -91,8 +91,6 @@
 
 ### 1. Скачивание скрипта
 
-Вы можете клонировать репозиторий или скачать скрипт напрямую:
-
 ```bash
 # Создать каталог для скриптов
 mkdir -p ~/inst
@@ -108,8 +106,10 @@ wget https://raw.githubusercontent.com/teanrus/astra-gia/main/scripts/auto-insta
 
 #### Интерактивный режим (по умолчанию)
 
+>Скрипт запросит пароль `sudo` при выполнении системных операций.
+
 ```bash
-bash auto-install.sh
+sudo bash auto-install.sh
 ```
 
 #### CLI-режим
@@ -119,12 +119,6 @@ bash auto-install.sh --repo stable --office --internet
 bash auto-install.sh --full-os
 bash auto-install.sh --browsers-only --dry-run
 bash auto-install.sh --education-only --list
-```
-
-Скрипт запросит пароль `sudo` при выполнении системных операций. При необходимости его можно запустить целиком от имени суперпользователя:
-
-```bash
-sudo bash auto-install.sh
 ```
 
 При запуске через `sudo` весь скрипт, включая скачивание файлов, работает с правами `root`. Используйте этот вариант только если это разрешено настройками системы и локальными правилами безопасности.
