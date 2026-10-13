@@ -1,6 +1,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)](https://astralinux.ru/)
 
+![Logo](/assets/auto-install-interactive.png)
+
 # Интерактивный режим `auto-install.sh`
 
 - [Общее описание скрипта](./auto-install.md)
@@ -21,6 +23,22 @@ bash auto-install.sh
 Сначала скрипт определяет версию Astra Linux из `/etc/astra_version` или `/etc/os-release`. Поддерживается только Astra Linux 1.8. Если запуск происходит в терминале, скрипт предлагает сохранить вывод в лог (`y`/`n`). При подтверждении файл `auto-install-<дата-время>.log` создается в текущем каталоге. Без терминала этот вопрос пропускается.
 
 Затем скрипт показывает найденную версию ОС и просит нажать Enter для продолжения.
+
+```mermaid
+flowchart TD
+    A[Запуск скрипта] --> B[Определение версии Astra Linux]
+    B --> C{Найдена поддерживаемая версия 1.8?}
+    C -- Нет --> D[Сообщение об ошибке и завершение]
+    C -- Да --> E{Запуск в терминале?}
+    E -- Нет --> I[Показать найденную версию]
+    E -- Да --> F{Сохранить лог?}
+    F -- Нет --> I
+    F -- Да --> G[Создать auto-install-дата-время.log]
+    G --> H{Файл лога создан?}
+    H -- Нет --> D
+    H -- Да --> I
+    I --> J[Нажать Enter для продолжения]
+```
 
 ### 2. Выбор ветки Astra
 
