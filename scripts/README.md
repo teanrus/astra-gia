@@ -17,32 +17,17 @@
 - подготовку системы к установке стороннего ПО;
 - интерактивный режим установки;
 - CLI-режим через флаги вроде `--office`, `--internet`, `--programming`, `--graphics`, `--edu`, `--all`;
-- установка программ для учебных задач и программирования, в том числе выбранных инструментов разработки в группе `--edu`;
-- интерактивный выбор подключения репозиториев ALSE 1.8 и их ветки;
-- удаление точных дубликатов записей Astra и файла невыбранной ветки при подключении репозиториев;
-- CLI-флаги `--no-repo`, `--dist-upgrade`, `--autoremove`, `--autoclean` и `--no-sane` для управления этими шагами;
-- интерактивный выбор установки подсистемы сканирования SANE (`sane`, `sane-utils`);
-- отдельные предложения обновить систему (`dist-upgrade`), удалить неиспользуемые пакеты (`autoremove`) и очистить кэш (`autoclean`) после подключения репозиториев;
-- запись инцидентов в лог при ошибках системных команд и возможность продолжить или завершить сценарий;
-- режимы `--full-os`, `--browsers-only`, `--education-only`;
-- проверку `--dry-run`;
-- просмотр списка пакетов `--list`;
-- сохранение вывода в лог по запросу при интерактивном запуске или через `--save-log` в CLI-режиме.
+- выбор ветки репозитория Astra Linux (`--repo frozen|stable`);
+- удаление точных дубликатов записей APT и отключение Frozen-источников других версий;
+- отдельное полное обновление ОС по флагу `--upgrade-os`;
+- интерактивный опрос по пакетам и отдельный SANE (`sane`, `sane-utils`);
+- автоматические наборы, пробный режим, список пакетов и логирование.
 
-Подробности: [auto-install.md](./auto-install.md)
+Документация разделена по темам:
 
-#### Состав наборов в CLI-режиме
-
-При запуске с флагами категории устанавливаются автоматически, без отдельных вопросов по каждому приложению:
-
-- `--office`: Foxit PDF Reader, NAPS2, OnlyOffice Desktop Editors, Сервис Среда.
-- `--internet`: ВК Мессенджер, Яндекс Браузер.
-- `--programming`: Code::Blocks, Eclipse IDE for C/C++ Developers, Eclipse IDE for Java Developers, IDLE 3 (Python 3.11), Notepad++, PascalABC.NET, PyCharm, Visual Studio Code, Python 3.12.13.
-- `--graphics`: GIMP 3, InkScape, Scribus, Audacity, OBS Studio, VLC.
-- `--edu`: КуМир 2, Basic 256, Code::Blocks, Eclipse IDE for Java Developers, IDLE 3 (Python 3.11), Notepad++, PascalABC.NET, PyCharm, Python 3.12.13, Visual Studio Code, R7 Office (`.deb`), Foxit PDF Reader.
-- `--all`: объединяет наборы `--office`, `--internet`, `--programming`, `--graphics` и `--edu`. Повторяющиеся пакеты добавляются в очередь только один раз.
-
-В CLI-режиме Python устанавливается в версии 3.12.13. Eclipse для C/C++ входит в `--programming`, но не в `--edu`. Пакет MAX и установка R7 Office через официальный репозиторий этими категориями не выбираются.
+- [Общее описание, требования и принцип работы](./auto-install.md)
+- [CLI-режим: флаги и состав наборов](./auto-install-cli.md)
+- [Интерактивный режим: все вопросы и этапы](./auto-install-interactive.md)
 
 ### install-vscode-extensions.sh
 

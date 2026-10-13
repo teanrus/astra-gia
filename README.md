@@ -31,7 +31,11 @@
 - установка пакетов по категориям: офис, браузеры, программирование, графика, образование;
 - режим `--dry-run`, `--list`, `--full-os`, `--browsers-only`, `--education-only`.
 
-Подробнее: [`scripts/auto-install.md`](scripts/auto-install.md)
+Документация:
+
+- [Общее описание](scripts/auto-install.md)
+- [CLI-режим](scripts/auto-install-cli.md)
+- [Интерактивный режим](scripts/auto-install-interactive.md)
 
 ### 2. Установка расширений VS Code из релиза
 

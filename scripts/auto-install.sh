@@ -74,9 +74,13 @@ print_package_list() {
   - NAPS2
   - OnlyOffice Desktop Editors
   - Сервис Среда
+  - R7 Office
+  - MAX
 
 [internet]
   - ВК Мессенджер
+  - Сервис Среда
+  - MAX
   - Яндекс Браузер
 
 [programming]
@@ -109,9 +113,9 @@ print_package_list() {
   - R7 Office
   - Foxit PDF Reader
 
-[extra]
-  - R7 Office
-  - MAX
+[extra: самостоятельные флаги]
+  - R7 Office (--r7-office)
+  - MAX (--max)
 EOF
 }
 
@@ -502,8 +506,11 @@ else
         exit 1
     fi
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
-    sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
-    sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
+    sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i \
+        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|g' \
+        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra astralinux|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|g' \
+        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|g' \
+        {} \; 2>/dev/null
 
     if [[ "$NUMBER" == "frozen" ]]; then
         echo "Отключение дополнительного Stable main-repository, чтобы не смешивать его с Frozen..."
@@ -736,10 +743,14 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package foxit
                 add_group_package naps2
                 add_group_package onlyoffice
+                INSTALL_R7_REPO=1
+                INSTALL_MAX_REPO=1
                 add_group_package sreda
                 ;;
             internet)
                 add_group_package vkmessenger
+                add_group_package sreda
+                INSTALL_MAX_REPO=1
                 add_group_apt yandex-browser-stable
                 ;;
             programming)
@@ -1052,8 +1063,8 @@ login desktop
 password gyxiLab84FByn7sCTd5JY
 EOF
 sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
-# Правильная строка репозитория с кодовым именем 'astralinux'
-echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
+# Кодовое имя репозитория для Astra Linux согласно инструкции R7 Office.
+echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ r7 main" | sudo tee /etc/apt/sources.list.d/r7-office.list
 sudo apt-get update
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y r7-office
 fi
