@@ -5,7 +5,7 @@
 #
 # Описание:
 #   Интерактивный и CLI-инсталлятор выбранного ПО с выбором репозитория Astra.
-#   Полное обновление ОС выполняется отдельно, только с флагом --upgrade-os.
+#   Полное обновление ОС выполняется только с --upgrade-os через astra-update.
 #
 # Использование:
 #   ./auto-install.sh [опции]
@@ -48,7 +48,7 @@ usage() {
   --browsers-only            Только браузеры и мессенджеры
   --education-only           Только обучение/ЕГЭ/ОГЭ инструменты
   --dry-run                  Показать что будет установлено без реальной установки
-  --upgrade-os               Обновить всю ОС через apt-get dist-upgrade
+  --upgrade-os               Обновить ОС утилитой Astra: astra-update -A -r -T
   --list                     Показать список доступных пакетов и категорий
   --save-log                 Сохранить вывод скрипта в файл с временной меткой
   --r7-office                Установить R7 Office через репозиторий
@@ -490,7 +490,7 @@ PYTHON
 if [[ $DRY_RUN -eq 1 ]]; then
     echo "DRY-RUN: пропускаем изменения системы, обновление списков пакетов и установку."
     if [[ $UPGRADE_OS -eq 1 ]]; then
-        echo "DRY-RUN: было бы выполнено полное обновление ОС (apt-get dist-upgrade)."
+        echo "DRY-RUN: было бы выполнено обновление ОС: sudo astra-update -A -r -T."
     fi
 else
     echo "Отключение CD-ROM репозитория (чтобы система не просила вставить диск)..."
@@ -551,8 +551,8 @@ else
 
     if [[ $UPGRADE_OS -eq 1 ]]; then
         echo "Запрошено полное обновление ОС..."
-        if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y; then
-            echo "Ошибка: не удалось выполнить dist-upgrade." >&2
+        if ! sudo astra-update -A -r -T; then
+            echo "Ошибка: не удалось выполнить astra-update -A -r -T." >&2
             exit 1
         fi
     else
