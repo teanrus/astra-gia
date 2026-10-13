@@ -1,7 +1,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)
 
-# Автоматизация установки ПО для ГИА на Astra Linux SE 1.8
+# Скрипт `auto-install.sh` Общее описание, требования и принцип работы
 
 `auto-install.sh` — Bash-скрипт для подготовки репозиториев и установки выбранного программного обеспечения на Astra Linux Special Edition 1.8 (x86_64). Скрипт поддерживает два способа выбора приложений:
 
@@ -10,7 +10,6 @@
 
 ## Документы
 
-- [Общее описание, требования и принцип работы](./auto-install.md)
 - [CLI-режим: флаги, наборы программ и примеры](./auto-install-cli.md)
 - [Интерактивный режим: порядок шагов и все вопросы](./auto-install-interactive.md)
 
