@@ -1,3 +1,6 @@
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)](https://astralinux.ru/)
+
 # Интерактивный режим `auto-install.sh`
 
 [Общее описание скрипта](./auto-install.md) · [CLI-режим](./auto-install-cli.md)
