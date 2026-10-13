@@ -112,7 +112,7 @@ wget https://raw.githubusercontent.com/teanrus/astra-gia/main/scripts/auto-insta
 >Скрипт запросит пароль `sudo` при выполнении системных операций.
 
 ```bash
-sudo bash auto-install.sh
+bash auto-install.sh
 ```
 
 #### CLI-режим
