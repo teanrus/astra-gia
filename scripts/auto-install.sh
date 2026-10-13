@@ -870,8 +870,9 @@ if (( EUID == 0 )); then
     fi
 fi
 
-if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$PWD/tmp_deb.XXXXXX")"; then
-    echo "Ошибка: не удалось создать папку для скачанных пакетов." >&2
+DEB_DOWNLOAD_DIR="$PWD/deb-downloads"
+if ! mkdir -p -- "$DEB_DOWNLOAD_DIR" || ! chmod 700 "$DEB_DOWNLOAD_DIR"; then
+    echo "Ошибка: не удалось подготовить папку кэша пакетов: $DEB_DOWNLOAD_DIR" >&2
     exit 1
 fi
 if [[ -n "$DOWNLOAD_OWNER_UID" ]]; then
@@ -882,80 +883,104 @@ if [[ -n "$DOWNLOAD_OWNER_UID" ]]; then
     trap 'if [[ -d "$DEB_DOWNLOAD_DIR" ]]; then chown -R "$DOWNLOAD_OWNER_UID:$DOWNLOAD_OWNER_GID" "$DEB_DOWNLOAD_DIR" || echo "Предупреждение: не удалось восстановить владельца временной папки." >&2; fi' EXIT
 fi
 
-handle_checksum_failure() {
-    local package_name="$1"
-    local package_file="$2"
-    local checksum_file="$3"
-    local action
-
-    echo "Предупреждение: проверка контрольной суммы пакета «$package_name» не пройдена." >&2
-    if [[ ! -t 0 ]]; then
-        echo "Нет интерактивного ввода для выбора действия. Установка отменена." >&2
-        return 1
-    fi
-
-    if ! read -r -p "Пропустить этот пакет и продолжить со следующим? (y/n): " action; then
-        echo "Не удалось получить ответ. Установка отменена." >&2
-        return 1
-    fi
-    if [[ ! "$action" =~ ^[YyДд]$ ]]; then
-        echo "Установка отменена по выбору пользователя." >&2
-        return 1
-    fi
-
-    if ! rm -f -- "$package_file" "$checksum_file"; then
-        echo "Ошибка: не удалось удалить непроверенный пакет «$package_name»." >&2
-        return 1
-    fi
-    echo "Пакет «$package_name» пропущен. Переход к следующему пакету."
-    return 0
+is_valid_cached_deb() {
+    local package_file="$1"
+    local expected_checksum="$2"
+    [[ -s "$package_file" ]] \
+        && printf '%s  %s\n' "$expected_checksum" "$package_file" | sha256sum --check --status \
+        && dpkg-deb --info "$package_file" >/dev/null 2>&1
 }
 
 declare -a DEB_FILES_TO_INSTALL=()
 declare -a DEB_NAMES_TO_INSTALL=()
-echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
+echo "Постоянный кэш пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
-echo "Загрузка: ${NAMES_TO_DOWNLOAD[$i]}..."
-filename=$(basename "${URLS_TO_DOWNLOAD[$i]}" | sed 's/.*file=\(.*\.deb\).*/\1/')
-if [[ "$filename" == *"raw"* ]] || [[ -z "$filename" ]]; then
-filename="package_${i}.deb"
-fi
-if ! wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$DEB_DOWNLOAD_DIR/$filename" \
-    -q --show-progress --progress=bar:force:noscroll; then
-    echo "Ошибка: не удалось скачать пакет «${NAMES_TO_DOWNLOAD[$i]}»." >&2
-    exit 1
-fi
-if [[ "${URLS_TO_DOWNLOAD[$i]}" == "$GITHUB_RELEASE_BASE_URL"* ]]; then
-    checksum_file="$DEB_DOWNLOAD_DIR/$filename.sha256"
-    if ! wget -q "${URLS_TO_DOWNLOAD[$i]}.sha256" -O "$checksum_file"; then
-        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
-            continue
-        fi
-        exit 1
+    package_name="${NAMES_TO_DOWNLOAD[$i]}"
+    package_url="${URLS_TO_DOWNLOAD[$i]}"
+    filename=$(basename "$package_url" | sed 's/.*file=\(.*\.deb\).*/\1/')
+    if [[ "$filename" == *"raw"* ]] || [[ -z "$filename" ]]; then
+        filename="package_${i}.deb"
     fi
-    expected_checksum=$(awk -v filename="$filename" '$2 == filename || $2 == "*" filename { print $1; count++ } END { if (count != 1) exit 1 }' "$checksum_file") || {
-        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
+
+    package_file="$DEB_DOWNLOAD_DIR/$filename"
+    download_tmp="$package_file.part.$$"
+    if [[ "$package_url" == "$GITHUB_RELEASE_BASE_URL"* ]]; then
+        checksum_file="$package_file.sha256"
+        checksum_tmp="$checksum_file.part.$$"
+        if ! wget -q "${package_url}.sha256" -O "$checksum_tmp"; then
+            echo "ОШИБКА: не удалось получить контрольную сумму для «$package_name»; пакет пропущен." >&2
+            rm -f -- "$checksum_tmp"
+            PACKAGE_INSTALL_FAILURES+=("$package_name")
             continue
         fi
-        exit 1
-    }
-    if [[ ! "$expected_checksum" =~ ^[[:xdigit:]]{64}$ ]]; then
-        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
+        expected_checksum=$(awk -v filename="$filename" '$2 == filename || $2 == "*" filename { print $1; count++ } END { if (count != 1) exit 1 }' "$checksum_tmp") || expected_checksum=""
+        if [[ ! "$expected_checksum" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "ОШИБКА: некорректная контрольная сумма для «$package_name»; пакет пропущен." >&2
+            rm -f -- "$checksum_tmp"
+            PACKAGE_INSTALL_FAILURES+=("$package_name")
             continue
         fi
-        exit 1
+
+        if is_valid_cached_deb "$package_file" "$expected_checksum"; then
+            echo "Пакет уже есть в кэше, контрольная сумма проверена: $package_name"
+        else
+            rm -f -- "$package_file"
+            reused_legacy=0
+            for legacy_file in "$PWD"/tmp_deb.*/"$filename"; do
+                if [[ -f "$legacy_file" ]] && is_valid_cached_deb "$legacy_file" "$expected_checksum"; then
+                    if ! ln -- "$legacy_file" "$package_file" 2>/dev/null; then
+                        cp -p -- "$legacy_file" "$download_tmp" && mv -- "$download_tmp" "$package_file" || continue
+                    fi
+                    echo "Пакет взят из ранее сохранённой папки; повторное скачивание не требуется: $package_name"
+                    reused_legacy=1
+                    break
+                fi
+            done
+
+            if [[ "$reused_legacy" -eq 0 ]]; then
+                echo "Загрузка: $package_name..."
+                if ! wget --no-check-certificate "$package_url" -O "$download_tmp" \
+                    -q --show-progress --progress=bar:force:noscroll; then
+                    echo "ОШИБКА: не удалось скачать пакет «$package_name»; перехожу к следующему." >&2
+                    rm -f -- "$download_tmp"
+                    PACKAGE_INSTALL_FAILURES+=("$package_name")
+                    continue
+                fi
+                if ! is_valid_cached_deb "$download_tmp" "$expected_checksum"; then
+                    echo "ОШИБКА: пакет «$package_name» повреждён или не прошёл SHA-256; пакет пропущен." >&2
+                    rm -f -- "$download_tmp"
+                    PACKAGE_INSTALL_FAILURES+=("$package_name")
+                    continue
+                fi
+                if ! mv -- "$download_tmp" "$package_file"; then
+                    echo "ОШИБКА: не удалось сохранить пакет «$package_name» в кэш; пакет пропущен." >&2
+                    rm -f -- "$download_tmp"
+                    PACKAGE_INSTALL_FAILURES+=("$package_name")
+                    continue
+                fi
+                echo "Контрольная сумма проверена: $package_name"
+            fi
+        fi
+        if ! mv -- "$checksum_tmp" "$checksum_file"; then
+            echo "ОШИБКА: не удалось сохранить контрольную сумму пакета «$package_name»; пакет пропущен." >&2
+            PACKAGE_INSTALL_FAILURES+=("$package_name")
+            continue
+        fi
+    else
+        echo "Загрузка: $package_name..."
+        if ! wget --no-check-certificate "$package_url" -O "$download_tmp" \
+            -q --show-progress --progress=bar:force:noscroll \
+            || ! dpkg-deb --info "$download_tmp" >/dev/null 2>&1 \
+            || ! mv -- "$download_tmp" "$package_file"; then
+            echo "ОШИБКА: не удалось получить корректный пакет «$package_name»; пакет пропущен." >&2
+            rm -f -- "$download_tmp"
+            PACKAGE_INSTALL_FAILURES+=("$package_name")
+            continue
+        fi
     fi
-    if ! printf '%s  %s\n' "$expected_checksum" "$DEB_DOWNLOAD_DIR/$filename" | sha256sum --check --status; then
-        if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
-            continue
-        fi
-        exit 1
-    fi
-    echo "Контрольная сумма проверена: ${NAMES_TO_DOWNLOAD[$i]}"
-fi
-DEB_FILES_TO_INSTALL+=("$DEB_DOWNLOAD_DIR/$filename")
-DEB_NAMES_TO_INSTALL+=("${NAMES_TO_DOWNLOAD[$i]}")
+    DEB_FILES_TO_INSTALL+=("$package_file")
+    DEB_NAMES_TO_INSTALL+=("$package_name")
 done
 
 declare -a VALID_DEB_FILES=()
@@ -972,6 +997,22 @@ done
 DEB_FILES_TO_INSTALL=("${VALID_DEB_FILES[@]}")
 DEB_NAMES_TO_INSTALL=("${VALID_DEB_NAMES[@]}")
 
+declare -a INSTALLABLE_DEB_FILES=()
+declare -a INSTALLABLE_DEB_NAMES=()
+for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
+    package_id=$(dpkg-deb -f "${DEB_FILES_TO_INSTALL[$i]}" Package)
+    package_version=$(dpkg-deb -f "${DEB_FILES_TO_INSTALL[$i]}" Version)
+    installed_version=$(dpkg-query -W -f='${Version}' "$package_id" 2>/dev/null || true)
+    if [[ -n "$installed_version" ]] && dpkg --compare-versions "$installed_version" gt "$package_version"; then
+        echo "Пакет «${DEB_NAMES_TO_INSTALL[$i]}» пропущен: уже установлена более новая версия $installed_version; downgrade до $package_version не выполняется."
+        continue
+    fi
+    INSTALLABLE_DEB_FILES+=("${DEB_FILES_TO_INSTALL[$i]}")
+    INSTALLABLE_DEB_NAMES+=("${DEB_NAMES_TO_INSTALL[$i]}")
+done
+DEB_FILES_TO_INSTALL=("${INSTALLABLE_DEB_FILES[@]}")
+DEB_NAMES_TO_INSTALL=("${INSTALLABLE_DEB_NAMES[@]}")
+
 if [[ ${#DEB_FILES_TO_INSTALL[@]} -gt 0 ]]; then
     echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
     # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
@@ -985,7 +1026,7 @@ if [[ ${#DEB_FILES_TO_INSTALL[@]} -gt 0 ]]; then
         done
     fi
 else
-    echo "Нет пакетов для установки: все выбранные пакеты были пропущены."
+    echo "Нет пакетов для установки: файлы отсутствуют либо уже установлена более новая версия."
 fi
 else
 echo "Вы не выбрали ни одного пакета для установки через .deb."
@@ -1033,24 +1074,9 @@ echo "Восстановление CD-ROM репозитория..."
 sudo sed -i '/cdrom:/ s/^#//' /etc/apt/sources.list
 sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^#//' {} \; 2>/dev/null
 
-# --- Очистка или сохранение скачанных .deb пакетов ---
+# --- Сохранение кэша скачанных .deb пакетов ---
 if [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
-    if [[ -t 0 ]]; then
-        read -r -p "Оставить скачанные .deb-пакеты для дальнейшего использования? (y/n): " keep_debs
-    else
-        keep_debs="n"
-    fi
-
-    if [[ "$keep_debs" =~ ^[YyДд]$ ]]; then
-        echo "Скачанные .deb-пакеты сохранены в: $DEB_DOWNLOAD_DIR"
-    else
-        if rm -rf -- "$DEB_DOWNLOAD_DIR"; then
-            echo "Скачанные .deb-пакеты удалены."
-        else
-            echo "Ошибка: не удалось удалить каталог со скачанными пакетами: $DEB_DOWNLOAD_DIR" >&2
-            exit 1
-        fi
-    fi
+    echo "Проверенные .deb-пакеты оставлены в кэше: $DEB_DOWNLOAD_DIR"
 fi
 
 # --- Завершение ---
