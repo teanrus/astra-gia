@@ -28,6 +28,7 @@ UPGRADE_OS=0
 INSTALL_GROUPS=()
 INSTALL_R7_REPO=0
 INSTALL_MAX_REPO=0
+PACKAGE_INSTALL_FAILURES=()
 
 # === ФУНКЦИИ ===
 usage() {
@@ -413,6 +414,74 @@ printf 'Удалено дублирующихся записей APT: %s\n' "$du
 ROOT_SCRIPT
 }
 
+disable_obsolete_frozen_sources() {
+    local apt_dir="${1:-/etc/apt}"
+    local selected_version="$2"
+    sudo python3 - "$apt_dir" "$selected_version" <<'PYTHON'
+import re
+import sys
+from pathlib import Path
+
+apt_dir = Path(sys.argv[1])
+selected_version = sys.argv[2]
+frozen_url = re.compile(
+    r"https?://(?:download|dl)\.astralinux\.ru/astra/frozen/1\.8_x86-64/([^/\s]+)/"
+)
+source_files = [apt_dir / "sources.list"]
+source_dir = apt_dir / "sources.list.d"
+source_files.extend(sorted(source_dir.glob("*.list")))
+source_files.extend(sorted(source_dir.glob("*.sources")))
+disabled = 0
+
+for source_file in source_files:
+    if not source_file.is_file():
+        continue
+    with source_file.open("r", encoding="utf-8", newline="") as source:
+        content = source.read()
+    if source_file.suffix == ".sources":
+        parts = re.split(r"((?:\r?\n)[ \t]*(?:\r?\n))", content)
+        for index in range(0, len(parts), 2):
+            stanza = parts[index]
+            if not re.search(r"(?im)^URIs?:", stanza):
+                continue
+            versions = frozen_url.findall(stanza)
+            if not any(version != selected_version for version in versions):
+                continue
+            enabled = re.search(r"(?im)^Enabled:[ \t]*([^\r\n]*)", stanza)
+            if enabled and enabled.group(1).strip().lower() == "no":
+                continue
+            if enabled:
+                stanza = re.sub(
+                    r"(?im)^Enabled:[^\r\n]*", "Enabled: no", stanza, count=1
+                )
+            else:
+                newline = "\r\n" if "\r\n" in stanza else "\n"
+                stanza = stanza.rstrip("\r\n") + newline + "Enabled: no" + newline
+            parts[index] = stanza
+            disabled += 1
+        updated_content = "".join(parts)
+    else:
+        updated_lines = []
+        for line in content.splitlines(keepends=True):
+            if line.lstrip().startswith("#"):
+                updated_lines.append(line)
+                continue
+            versions = frozen_url.findall(line)
+            if any(version != selected_version for version in versions):
+                indent = line[: len(line) - len(line.lstrip())]
+                line = indent + "# disabled by auto-install.sh: " + line[len(indent) :]
+                disabled += 1
+            updated_lines.append(line)
+        updated_content = "".join(updated_lines)
+
+    if updated_content != content:
+        with source_file.open("w", encoding="utf-8", newline="") as source:
+            source.write(updated_content)
+
+print(f"Отключено устаревших Astra Frozen-источников: {disabled}")
+PYTHON
+}
+
 # --- Подготовка репозиториев и пакетов ---
 if [[ $DRY_RUN -eq 1 ]]; then
     echo "DRY-RUN: пропускаем изменения системы, обновление списков пакетов и установку."
@@ -450,6 +519,14 @@ else
         if ! grep -Eq "^[[:space:]]*deb .*dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
             echo "Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей..."
             echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list >/dev/null
+        fi
+    fi
+
+    if [[ "$NUMBER" == "frozen" ]]; then
+        echo "Отключение Astra Frozen-репозиториев других версий..."
+        if ! disable_obsolete_frozen_sources /etc/apt "$FROZEN_VERSION"; then
+            echo "Ошибка: не удалось отключить устаревшие Astra Frozen-репозитории." >&2
+            exit 1
         fi
     fi
 
@@ -772,9 +849,37 @@ fi
 # === УСТАНОВКА ВЫБРАННЫХ ПАКЕТОВ ===
 # --- ЭТАП 1: Скачивание и установка .deb пакетов ---
 if [ ${#URLS_TO_DOWNLOAD[@]} -gt 0 ]; then
+DOWNLOAD_OWNER_UID=""
+DOWNLOAD_OWNER_GID=""
+if (( EUID == 0 )); then
+    if [[ "${SUDO_UID:-}" =~ ^[1-9][0-9]*$ ]]; then
+        DOWNLOAD_OWNER_UID="$SUDO_UID"
+        DOWNLOAD_OWNER_GID="${SUDO_GID:-}"
+        if [[ -z "$DOWNLOAD_OWNER_GID" ]]; then
+            DOWNLOAD_OWNER_GID="$(stat -c %g -- "$PWD")"
+        fi
+    else
+        DOWNLOAD_OWNER_UID="$(stat -c %u -- "$PWD")"
+        if [[ "$DOWNLOAD_OWNER_UID" =~ ^[1-9][0-9]*$ ]]; then
+            DOWNLOAD_OWNER_GID="$(stat -c %g -- "$PWD")"
+        else
+            echo "Ошибка: скрипт запущен от root без SUDO_USER, а текущая папка принадлежит root." >&2
+            echo "Запустите скрипт от обычного пользователя; для системных операций он сам использует sudo." >&2
+            exit 1
+        fi
+    fi
+fi
+
 if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$PWD/tmp_deb.XXXXXX")"; then
     echo "Ошибка: не удалось создать папку для скачанных пакетов." >&2
     exit 1
+fi
+if [[ -n "$DOWNLOAD_OWNER_UID" ]]; then
+    if ! chown "$DOWNLOAD_OWNER_UID:$DOWNLOAD_OWNER_GID" "$DEB_DOWNLOAD_DIR"; then
+        echo "Ошибка: не удалось назначить владельцем временной папки пользователя, запустившего скрипт." >&2
+        exit 1
+    fi
+    trap 'if [[ -d "$DEB_DOWNLOAD_DIR" ]]; then chown -R "$DOWNLOAD_OWNER_UID:$DOWNLOAD_OWNER_GID" "$DEB_DOWNLOAD_DIR" || echo "Предупреждение: не удалось восстановить владельца временной папки." >&2; fi' EXIT
 fi
 
 handle_checksum_failure() {
@@ -807,6 +912,7 @@ handle_checksum_failure() {
 }
 
 declare -a DEB_FILES_TO_INSTALL=()
+declare -a DEB_NAMES_TO_INSTALL=()
 echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
@@ -849,11 +955,35 @@ if [[ "${URLS_TO_DOWNLOAD[$i]}" == "$GITHUB_RELEASE_BASE_URL"* ]]; then
     echo "Контрольная сумма проверена: ${NAMES_TO_DOWNLOAD[$i]}"
 fi
 DEB_FILES_TO_INSTALL+=("$DEB_DOWNLOAD_DIR/$filename")
+DEB_NAMES_TO_INSTALL+=("${NAMES_TO_DOWNLOAD[$i]}")
 done
+
+declare -a VALID_DEB_FILES=()
+declare -a VALID_DEB_NAMES=()
+for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
+    if ! dpkg-deb --info "${DEB_FILES_TO_INSTALL[$i]}" >/dev/null 2>&1; then
+        echo "ОШИБКА: пакет «${DEB_NAMES_TO_INSTALL[$i]}» не является корректным .deb; пакет пропущен. Файл: ${DEB_FILES_TO_INSTALL[$i]}" >&2
+        PACKAGE_INSTALL_FAILURES+=("${DEB_NAMES_TO_INSTALL[$i]}")
+        continue
+    fi
+    VALID_DEB_FILES+=("${DEB_FILES_TO_INSTALL[$i]}")
+    VALID_DEB_NAMES+=("${DEB_NAMES_TO_INSTALL[$i]}")
+done
+DEB_FILES_TO_INSTALL=("${VALID_DEB_FILES[@]}")
+DEB_NAMES_TO_INSTALL=("${VALID_DEB_NAMES[@]}")
+
 if [[ ${#DEB_FILES_TO_INSTALL[@]} -gt 0 ]]; then
     echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
     # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-    sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[@]}"
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[@]}"; then
+        echo "Предупреждение: групповая установка .deb завершилась ошибкой; проверяю пакеты по одному." >&2
+        for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
+            if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[$i]}"; then
+                echo "ОШИБКА: пакет «${DEB_NAMES_TO_INSTALL[$i]}» не установлен; перехожу к следующему." >&2
+                PACKAGE_INSTALL_FAILURES+=("${DEB_NAMES_TO_INSTALL[$i]}")
+            fi
+        done
+    fi
 else
     echo "Нет пакетов для установки: все выбранные пакеты были пропущены."
 fi
@@ -926,6 +1056,12 @@ fi
 # --- Завершение ---
 #clear
 echo "======================================"
+if [[ ${#PACKAGE_INSTALL_FAILURES[@]} -gt 0 ]]; then
+    echo "Установка завершилась с ошибками. Не установлены или пропущены пакеты:"
+    printf '  - %s\n' "${PACKAGE_INSTALL_FAILURES[@]}"
+    echo "======================================"
+    exit 1
+fi
 echo "Установка завершена!"
 echo "======================================"
 exit 0
