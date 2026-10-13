@@ -1,5 +1,5 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)
+[![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)](https://astralinux.ru/)
 
 # Скрипт `auto-install.sh` Общее описание, требования и принцип работы
 
