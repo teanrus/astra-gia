@@ -1,5 +1,35 @@
 #!/bin/bash
 
+##############################################################################
+# auto-install.sh — Автоматизированная установка ПО для Astra Linux SE 1.8
+#
+# Описание:
+#   Интерактивный и CLI-инсталлятор выбранного ПО с выбором репозитория Astra.
+#   Полное обновление ОС выполняется отдельно, только с флагом --upgrade-os.
+#
+# Использование:
+#   ./auto-install.sh [опции]
+#
+# Зависимости: bash, apt-get, sudo, wget, curl, sha256sum
+##############################################################################
+
+# === КОНФИГУРАЦИЯ ===
+readonly SCRIPT_VERSION="2.0"
+readonly GITHUB_RELEASE_TAG="v2.0"
+readonly GITHUB_RELEASE_BASE_URL="https://github.com/teanrus/astra-gia/releases/download/${GITHUB_RELEASE_TAG}/"
+
+# === ГЛОБАЛЬНОЕ СОСТОЯНИЕ ===
+REPO_BRANCH=""
+AUTO_MODE=0
+LIST_ONLY=0
+DRY_RUN=0
+SAVE_LOG=0
+UPGRADE_OS=0
+INSTALL_GROUPS=()
+INSTALL_R7_REPO=0
+INSTALL_MAX_REPO=0
+
+# === ФУНКЦИИ ===
 usage() {
     cat <<'EOF'
 Использование:
@@ -17,6 +47,7 @@ usage() {
   --browsers-only            Только браузеры и мессенджеры
   --education-only           Только обучение/ЕГЭ/ОГЭ инструменты
   --dry-run                  Показать что будет установлено без реальной установки
+  --upgrade-os               Обновить всю ОС через apt-get dist-upgrade
   --list                     Показать список доступных пакетов и категорий
   --save-log                 Сохранить вывод скрипта в файл с временной меткой
   --r7-office                Установить R7 Office через репозиторий
@@ -83,18 +114,56 @@ print_package_list() {
 EOF
 }
 
-REPO_BRANCH=""
-AUTO_MODE=0
-LIST_ONLY=0
-DRY_RUN=0
-SAVE_LOG=0
-INSTALL_GROUPS=()
+detect_astra_version() {
+    local candidate version="" base_version=""
+    local -a version_candidates=()
 
+    if [[ -r /etc/astra_version ]]; then
+        version_candidates+=("$(< /etc/astra_version)")
+    fi
+
+    if [[ -r /etc/os-release ]]; then
+        while IFS='=' read -r key value; do
+            case "$key" in
+                VERSION_ID|PRETTY_NAME)
+                    value="${value%\"}"
+                    value="${value#\"}"
+                    version_candidates+=("$value")
+                    ;;
+            esac
+        done < /etc/os-release
+    fi
+
+    for candidate in "${version_candidates[@]}"; do
+        if [[ "$candidate" =~ (1\.8(\.[0-9]+)?) ]]; then
+            version="${BASH_REMATCH[1]}"
+            if [[ "$version" == 1.8.* ]]; then
+                printf '%s\n' "$version"
+                return 0
+            fi
+            base_version="$version"
+        fi
+    done
+
+    if [[ -n "$base_version" ]]; then
+        printf '%s\n' "$base_version"
+        return 0
+    fi
+
+    echo "Ошибка: не удалось определить версию Astra Linux 1.8 из /etc/astra_version или /etc/os-release." >&2
+    return 1
+}
+
+# === ОСНОВНОЙ СЦЕНАРИЙ: АРГУМЕНТЫ И ОПРЕДЕЛЕНИЕ ОС ===
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --repo)
             if [[ $# -lt 2 ]]; then
                 echo "Ошибка: после --repo укажите frozen или stable." >&2
+                exit 1
+            fi
+            if [[ "$2" != "frozen" && "$2" != "stable" ]]; then
+                echo "Ошибка: поддерживаются только ветки frozen или stable." >&2
                 exit 1
             fi
             REPO_BRANCH="$2"
@@ -118,6 +187,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --dry-run)
             DRY_RUN=1
+            shift
+            ;;
+        --upgrade-os)
+            UPGRADE_OS=1
             shift
             ;;
         --list)
@@ -153,7 +226,22 @@ if [[ $LIST_ONLY -eq 1 ]]; then
     exit 0
 fi
 
-if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
+if ! ASTRA_VERSION=$(detect_astra_version); then
+    exit 1
+fi
+if [[ "$ASTRA_VERSION" != 1.8 && "$ASTRA_VERSION" != 1.8.* ]]; then
+    echo "Ошибка: обнаружена Astra Linux версии $ASTRA_VERSION; этот скрипт поддерживает только ветку 1.8." >&2
+    exit 1
+fi
+
+FROZEN_VERSION=""
+case "$ASTRA_VERSION" in
+    1.8.4|1.8.5|1.8.6)
+        FROZEN_VERSION="$ASTRA_VERSION"
+        ;;
+esac
+
+if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || $UPGRADE_OS -eq 1 || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
     AUTO_MODE=1
 fi
 
@@ -176,8 +264,12 @@ fi
 
 echo "==============================================================================="
 echo "Интерактивный скрипт автоматизации установки ПО для ALSE 1.8"
+echo "Версия скрипта: $SCRIPT_VERSION"
 echo "R.Tyan (c) 2026 | tyanrv@lbt.yanao.ru"
+echo ""
+echo ""
 echo "================================================================================"
+echo "Обнаружена Astra Linux $ASTRA_VERSION."
 
 if [[ $AUTO_MODE -eq 0 ]]; then
     read -p "Нажмите Enter для начала настройки списка установки..."
@@ -192,39 +284,76 @@ if [[ -n "$REPO_BRANCH" ]]; then
 else
     if [[ $AUTO_MODE -eq 1 ]]; then
         if [[ ${#INSTALL_GROUPS[@]} -gt 0 ]]; then
-            echo "Авто-режим активирован. Проверяем метки репозитория..."
+            echo "Авто-режим активирован. Выбираем репозиторий с учетом версии ОС..."
         fi
-        if [[ -z "$REPO_BRANCH" ]]; then
-            NUMBER="1"
+        if [[ -n "$FROZEN_VERSION" ]]; then
+            NUMBER="frozen"
+        else
+            NUMBER="stable"
         fi
     else
-        echo "1 - Ветка Frozen для 1.8.4.48 (Рекомендуется для АРМ ГИА-11 в ППЭ)"
-        echo "2 - Ветка Stable для 1.8 (Получение оперативных обновлений ОС)"
-        read -p "Укажите числовое значение: " NUMBER
+        echo "1 - Ветка Stable для Astra Linux 1.8 (получение оперативных обновлений ОС)"
+        if [[ -n "$FROZEN_VERSION" ]]; then
+            echo "2 - Ветка Frozen для установленной версии Astra Linux $FROZEN_VERSION"
+        else
+            echo "Для версии $ASTRA_VERSION ветка Frozen в скрипте не поддерживается; доступна Stable."
+        fi
+        read -r -p "Укажите числовое значение: " REPO_CHOICE
+        case "$REPO_CHOICE" in
+            1) NUMBER="stable" ;;
+            2)
+                if [[ -n "$FROZEN_VERSION" ]]; then
+                    NUMBER="frozen"
+                else
+                    echo "Ошибка: для версии $ASTRA_VERSION ветка Frozen недоступна." >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "Ошибка: укажите 1 (Stable) или доступный номер ветки Frozen." >&2
+                exit 1
+                ;;
+        esac
     fi
 fi
 
+# === НАСТРОЙКА РЕПОЗИТОРИЯ ОС ===
+case "$NUMBER" in
+    frozen)
+        if [[ -z "$FROZEN_VERSION" ]]; then
+            echo "Ошибка: для установленной версии Astra Linux $ASTRA_VERSION ветка Frozen не поддерживается." >&2
+            exit 1
+        fi
+        REPO_FILE="/etc/apt/sources.list.d/astra-frozen-extended.list"
+        OTHER_REPO_FILE="/etc/apt/sources.list.d/astra-stable-extended.list"
+        REPO_LINES=(
+            "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/$FROZEN_VERSION/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware"
+            "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/$FROZEN_VERSION/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware"
+        )
+        echo "Выбрана ветка Frozen для Astra Linux $FROZEN_VERSION."
+        ;;
+    stable)
+        REPO_FILE="/etc/apt/sources.list.d/astra-stable-extended.list"
+        OTHER_REPO_FILE="/etc/apt/sources.list.d/astra-frozen-extended.list"
+        REPO_LINES=(
+            "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware"
+            "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware"
+        )
+        echo "Выбрана ветка Stable для Astra Linux 1.8."
+        ;;
+    *)
+        echo "Ошибка: неизвестная ветка репозитория: $NUMBER." >&2
+        exit 1
+        ;;
+esac
+
 if [[ $DRY_RUN -eq 1 ]]; then
-    echo "Режим dry-run активирован. Изменения в системных репозиториях и установка пакетов будут пропущены."
+    echo "DRY-RUN: пропускаем изменение системных репозиториев и установку пакетов."
 else
-    case "$NUMBER" in
-        1)
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/frozen/1.8_x86-64/1.8.4/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-frozen-extended.list >/dev/null
-            echo "Выбрана ветка Frozen для 1.8.4.48. Продолжаем настройку системы..."
-            ;;
-        2)
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-extended/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
-            echo "deb [arch=amd64] https://download.astralinux.ru/astra/stable/1.8_x86-64/repository-main/ 1.8_x86-64 main contrib non-free non-free-firmware" | sudo tee -a /etc/apt/sources.list.d/astra-stable-extended.list >/dev/null
-            echo "Выбрана ветка Stable для 1.8. Продолжаем настройку системы..."
-            ;;
-        *)
-            echo "======================"
-            echo "Действие отсутствует..."
-            echo "======================"
-            exit 0
-            ;;
-    esac
+    if ! sudo rm -f "$OTHER_REPO_FILE" || ! printf '%s\n' "${REPO_LINES[@]}" | sudo tee "$REPO_FILE" >/dev/null; then
+        echo "Ошибка: не удалось записать выбранный репозиторий в $REPO_FILE." >&2
+        exit 1
+    fi
 fi
 
 deduplicate_apt_sources() {
@@ -284,25 +413,44 @@ printf 'Удалено дублирующихся записей APT: %s\n' "$du
 ROOT_SCRIPT
 }
 
-# --- БЛОК ПОДГОТОВКИ СИСТЕМЫ (РЕШАЕТ ПРОБЛЕМУ С DVD И СЛОМАННЫМИ ПАКЕТАМИ) ---
+# --- Подготовка репозиториев и пакетов ---
 if [[ $DRY_RUN -eq 1 ]]; then
-    echo "DRY-RUN: пропускаем отключение CD-ROM, подготовку apt-репозиториев, установку SANE и обновление системы."
+    echo "DRY-RUN: пропускаем изменения системы, обновление списков пакетов и установку."
+    if [[ $UPGRADE_OS -eq 1 ]]; then
+        echo "DRY-RUN: было бы выполнено полное обновление ОС (apt-get dist-upgrade)."
+    fi
 else
     echo "Отключение CD-ROM репозитория (чтобы система не просила вставить диск)..."
     sudo sed -i '/cdrom:/ s/^/#/' /etc/apt/sources.list
     sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \; 2>/dev/null
 
-    echo "Проверка и исправление состояния пакетной базы (fix-broken)..."
-    sudo apt-get clean
-    sudo env DEBIAN_FRONTEND=noninteractive apt-get --fix-broken install -y
-
+    echo "Подготовка раскладки клавиатуры для безынтерактивной установки..."
+    if ! printf '%s\n' \
+        'keyboard-configuration keyboard-configuration/layoutcode string ru' \
+        'keyboard-configuration keyboard-configuration/xkb-keymap select ru' \
+        | sudo debconf-set-selections; then
+        echo "Ошибка: не удалось задать безынтерактивные параметры keyboard-configuration." >&2
+        exit 1
+    fi
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
     sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
     sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' {} \; 2>/dev/null
 
-    if ! grep -q "dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
-        echo "Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей..."
-        echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list
+    if [[ "$NUMBER" == "frozen" ]]; then
+        echo "Отключение дополнительного Stable main-repository, чтобы не смешивать его с Frozen..."
+        if ! sudo sed -i '\|^deb https://dl.astralinux.ru/astra/stable/1\.8_x86-64/main-repository/|s|^|# disabled: |' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
+            echo "Ошибка: не удалось отключить Stable main-repository при выборе Frozen." >&2
+            exit 1
+        fi
+    else
+        if ! sudo sed -i '\|^# disabled: deb https://dl.astralinux.ru/astra/stable/1\.8_x86-64/main-repository/|s|^# disabled: ||' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
+            echo "Ошибка: не удалось повторно включить Stable main-repository." >&2
+            exit 1
+        fi
+        if ! grep -Eq "^[[:space:]]*deb .*dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null; then
+            echo "Добавление основного репозитория Astra Linux 1.8 для разрешения зависимостей..."
+            echo "deb https://dl.astralinux.ru/astra/stable/1.8_x86-64/main-repository/ 1.8_x86-64 main contrib non-free" | sudo tee /etc/apt/sources.list.d/astra-main.list >/dev/null
+        fi
     fi
 
     echo "Проверка конфигурации на дублирующиеся APT-репозитории..."
@@ -311,40 +459,28 @@ else
         exit 1
     fi
 
-    if [[ $AUTO_MODE -eq 0 ]]; then
-        read -r -p "Выполнить обновление системы и очистку пакетов (dist-upgrade, autoremove, autoclean)? (y/n): " upgrade_ans
-        if [[ "$upgrade_ans" =~ ^[YyДд]$ ]]; then
-            echo "Обновление системы..."
-            if ! sudo apt-get dist-upgrade -y; then
-                echo "Ошибка: не удалось выполнить dist-upgrade." >&2
-                exit 1
-            fi
-            echo "Удаление неиспользуемых пакетов..."
-            if ! sudo apt-get autoremove -y; then
-                echo "Ошибка: не удалось выполнить autoremove." >&2
-                exit 1
-            fi
-            echo "Очистка локального кэша пакетов..."
-            if ! sudo apt-get autoclean; then
-                echo "Ошибка: не удалось выполнить autoclean." >&2
-                exit 1
-            fi
-        else
-            echo "Обновление и очистка пакетов пропущены."
-        fi
-    fi
-
     echo "Обновление списков пакетов (это может занять некоторое время)..."
     if ! sudo apt-get update; then
         echo "Ошибка: не удалось обновить списки пакетов." >&2
         exit 1
     fi
 
-    install_sane=1
+    if [[ $UPGRADE_OS -eq 1 ]]; then
+        echo "Запрошено полное обновление ОС..."
+        if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y; then
+            echo "Ошибка: не удалось выполнить dist-upgrade." >&2
+            exit 1
+        fi
+    else
+        echo "Полное обновление ОС пропущено; будут установлены только выбранные приложения."
+    fi
+
+    install_sane=0
     if [[ $AUTO_MODE -eq 0 ]]; then
         read -r -p "Установить подсистему сканирования SANE (sane, sane-utils)? (y/n): " sane_ans
-        if [[ ! "$sane_ans" =~ ^[YyДд]$ ]]; then
-            install_sane=0
+        if [[ "$sane_ans" =~ ^[YyДд]$ ]]; then
+            install_sane=1
+        else
             echo "Установка SANE пропущена."
         fi
     fi
@@ -359,6 +495,7 @@ else
 fi
 # -----------------------------------------------------------------------------
 
+# === КАТАЛОГ ПАКЕТОВ И ОЧЕРЕДЬ УСТАНОВКИ ===
 # Массивы для хранения выбора пользователя
 declare -a URLS_TO_DOWNLOAD
 declare -a NAMES_TO_DOWNLOAD
@@ -385,29 +522,26 @@ declare -A PACKAGE_NAMES=(
     [kumir]="КуМир 2"
 )
 declare -A PACKAGE_URLS=(
-    [foxit]="https://github.com/teanrus/astra-gia/releases/download/v2.0/foxitreader.deb"
-    [naps2]="https://github.com/teanrus/astra-gia/releases/download/v2.0/naps2.deb"
-    [onlyoffice]="https://github.com/teanrus/astra-gia/releases/download/v2.0/onlyoffice.deb"
-    [sreda]="https://github.com/teanrus/astra-gia/releases/download/v2.0/sreda.deb"
-    [vkmessenger]="https://github.com/teanrus/astra-gia/releases/download/v2.0/vk-messenger.deb"
-    [codeblocks]="https://github.com/teanrus/astra-gia/releases/download/v2.0/codeblocks.deb"
-    [eclipse-cpp]="https://github.com/teanrus/astra-gia/releases/download/v2.0/eclipse-cpp.deb"
-    [eclipse-java]="https://github.com/teanrus/astra-gia/releases/download/v2.0/eclipse-java.deb"
-    [notepadplus]="https://github.com/teanrus/astra-gia/releases/download/v2.0/notepadplus.deb"
-    [pascalabc]="https://github.com/teanrus/astra-gia/releases/download/v2.0/pascalABC.deb"
-    [pycharm]="https://github.com/teanrus/astra-gia/releases/download/v2.0/pycharm.deb"
-    [vscode]="https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb"
-    [python-3.9]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.9.25-alse1.8-amd64.deb"
-    [python-3.10]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.10.20-alse1.8-amd64.deb"
-    [python-3.12]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.12.13-alse1.8-amd64.deb"
-    [python-3.13]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.13.15-alse1.8-amd64.deb"
-    [python-3.14]="https://github.com/teanrus/astra-gia/releases/download/v2.0/python-3.14.7-alse1.8-amd64.deb"
-    [obs]="https://github.com/teanrus/astra-gia/releases/download/v2.0/obs-studio.deb"
-    [kumir]="https://github.com/teanrus/astra-gia/releases/download/v2.0/kumir2.deb"
+    [foxit]="${GITHUB_RELEASE_BASE_URL}foxitreader.deb"
+    [naps2]="${GITHUB_RELEASE_BASE_URL}naps2.deb"
+    [onlyoffice]="${GITHUB_RELEASE_BASE_URL}onlyoffice.deb"
+    [sreda]="${GITHUB_RELEASE_BASE_URL}sreda.deb"
+    [vkmessenger]="${GITHUB_RELEASE_BASE_URL}vk-messenger.deb"
+    [codeblocks]="${GITHUB_RELEASE_BASE_URL}codeblocks.deb"
+    [eclipse-cpp]="${GITHUB_RELEASE_BASE_URL}eclipse-cpp.deb"
+    [eclipse-java]="${GITHUB_RELEASE_BASE_URL}eclipse-java.deb"
+    [notepadplus]="${GITHUB_RELEASE_BASE_URL}notepadplus.deb"
+    [pascalabc]="${GITHUB_RELEASE_BASE_URL}pascalABC.deb"
+    [pycharm]="${GITHUB_RELEASE_BASE_URL}pycharm.deb"
+    [vscode]="${GITHUB_RELEASE_BASE_URL}code.deb"
+    [python-3.9]="${GITHUB_RELEASE_BASE_URL}python-3.9.25-alse1.8-amd64.deb"
+    [python-3.10]="${GITHUB_RELEASE_BASE_URL}python-3.10.20-alse1.8-amd64.deb"
+    [python-3.12]="${GITHUB_RELEASE_BASE_URL}python-3.12.13-alse1.8-amd64.deb"
+    [python-3.13]="${GITHUB_RELEASE_BASE_URL}python-3.13.15-alse1.8-amd64.deb"
+    [python-3.14]="${GITHUB_RELEASE_BASE_URL}python-3.14.7-alse1.8-amd64.deb"
+    [obs]="${GITHUB_RELEASE_BASE_URL}obs-studio.deb"
+    [kumir]="${GITHUB_RELEASE_BASE_URL}kumir2.deb"
 )
-INSTALL_R7_REPO=${INSTALL_R7_REPO:-0}
-INSTALL_MAX_REPO=${INSTALL_MAX_REPO:-0}
-
 add_group_apt() {
     local package="$1"
     local existing_package
@@ -437,6 +571,7 @@ add_group_package() {
     NAMES_TO_DOWNLOAD+=("$name")
 }
 
+# === ФУНКЦИИ ВЫБОРА ПАКЕТОВ ===
 # Функция для обычного .deb пакета
 ask_deb() {
 local package_key=$1
@@ -515,6 +650,7 @@ fi
 }
 
 echo ""
+# === ФОРМИРОВАНИЕ ОЧЕРЕДИ УСТАНОВКИ ===
 if [[ $AUTO_MODE -eq 1 ]]; then
     process_group_selection() {
         local group="$1"
@@ -633,6 +769,7 @@ if [[ $DRY_RUN -eq 1 ]]; then
     exit 0
 fi
 
+# === УСТАНОВКА ВЫБРАННЫХ ПАКЕТОВ ===
 # --- ЭТАП 1: Скачивание и установка .deb пакетов ---
 if [ ${#URLS_TO_DOWNLOAD[@]} -gt 0 ]; then
 if ! DEB_DOWNLOAD_DIR="$(mktemp -d "$PWD/tmp_deb.XXXXXX")"; then
@@ -672,7 +809,6 @@ handle_checksum_failure() {
 declare -a DEB_FILES_TO_INSTALL=()
 echo "Папка для скачанных пакетов: $DEB_DOWNLOAD_DIR"
 echo "Загрузка выбранных .deb пакетов..."
-RELEASE_ASSET_PREFIX="https://github.com/teanrus/astra-gia/releases/download/v2.0/"
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
 echo "Загрузка: ${NAMES_TO_DOWNLOAD[$i]}..."
 filename=$(basename "${URLS_TO_DOWNLOAD[$i]}" | sed 's/.*file=\(.*\.deb\).*/\1/')
@@ -684,7 +820,7 @@ if ! wget --no-check-certificate "${URLS_TO_DOWNLOAD[$i]}" -O "$DEB_DOWNLOAD_DIR
     echo "Ошибка: не удалось скачать пакет «${NAMES_TO_DOWNLOAD[$i]}»." >&2
     exit 1
 fi
-if [[ "${URLS_TO_DOWNLOAD[$i]}" == "$RELEASE_ASSET_PREFIX"* ]]; then
+if [[ "${URLS_TO_DOWNLOAD[$i]}" == "$GITHUB_RELEASE_BASE_URL"* ]]; then
     checksum_file="$DEB_DOWNLOAD_DIR/$filename.sha256"
     if ! wget -q "${URLS_TO_DOWNLOAD[$i]}.sha256" -O "$checksum_file"; then
         if handle_checksum_failure "${NAMES_TO_DOWNLOAD[$i]}" "$DEB_DOWNLOAD_DIR/$filename" "$checksum_file"; then
