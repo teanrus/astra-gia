@@ -1,5 +1,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)](https://astralinux.ru/)
+[![Version](https://img.shields.io/badge/OS-Astra_Linux_1.8-7B68EE?style=for-the-badge)](https://github.com/teanrus/astra-gia)
+[![Shell](https://img.shields.io/badge/Language-Bash-4EAA25?style=for-the-badge)](https://www.gnu.org/software/bash/)
+[![Automation](https://img.shields.io/badge/Automation-Software_Install-00A6A6?style=for-the-badge)](https://github.com/teanrus/astra-gia/blob/main/scripts/auto-install.md)
 
 ![Logo](/assets/auto-install-interactive.png)
 
