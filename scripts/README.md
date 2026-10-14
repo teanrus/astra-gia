@@ -1,7 +1,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Astra_Linux_1.8-0066CC?style=for-the-badge)](https://astralinux.ru/)
 [![Shell](https://img.shields.io/badge/Language-Bash-4EAA25?style=for-the-badge)](https://www.gnu.org/software/bash/)
-![Content](https://img.shields.io/badge/Content-Shell_Scripts-4EAA25?style=for-the-badge) ![Purpose](https://img.shields.io/badge/Purpose-Automation-2E8B57?style=for-the-badge)
+![Content](https://img.shields.io/badge/Content-Shell_Scripts-4EAA25?style=for-the-badge)
+![Purpose](https://img.shields.io/badge/Purpose-Automation-2E8B57?style=for-the-badge)
 
 # Скрипты проекта Astra GIA
 
