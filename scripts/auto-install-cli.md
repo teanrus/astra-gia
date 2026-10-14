@@ -1,5 +1,10 @@
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)](https://astralinux.ru/)
+[![Platform](https://img.shields.io/badge/Platform-Astra_Linux_1.8-0066CC?style=for-the-badge)](https://astralinux.ru/)
+[![Shell](https://img.shields.io/badge/Language-Bash-4EAA25?style=for-the-badge)](https://www.gnu.org/software/bash/)
+[![CLI](https://img.shields.io/badge/Mode-CLI-00A6A6?style=for-the-badge)](https://github.com/teanrus/astra-gia/blob/main/scripts/auto-install-cli.md)
+[![Dry Run](https://img.shields.io/badge/Feature-Dry--Run-orange?style=for-the-badge)](https://github.com/teanrus/astra-gia/blob/main/scripts/auto-install-cli.md)
+
+![Logo](/assets/auto-install-cli.png)
 
 # CLI-режим `auto-install.sh`
 
