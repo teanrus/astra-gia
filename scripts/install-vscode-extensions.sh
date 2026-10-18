@@ -35,6 +35,8 @@ DRY_RUN=0
 SELECT_USER=0
 AUTO_USER=0
 LIST_USERS_ONLY=0
+USERS=()
+TARGET_HOMES=()
 
 list_users() {
     local user_list=()
@@ -75,8 +77,7 @@ while [[ $# -gt 0 ]]; do
                 echo "Ошибка: после --user укажите имя пользователя." >&2
                 exit 1
             fi
-            USER_NAME="$2"
-            TARGET_HOME="/home/$USER_NAME"
+            USERS+=("$2")
             shift 2
             ;;
         --select-user)
@@ -108,47 +109,51 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$LIST_USERS_ONLY" -eq 1 ]]; then
-    mapfile -t USERS < <(list_users || true)
-    if [[ ${#USERS[@]} -eq 0 ]]; then
+    mapfile -t ALL_USERS < <(list_users || true)
+    if [[ ${#ALL_USERS[@]} -eq 0 ]]; then
         echo "Не найдено пользователей в /home/." >&2
         exit 1
     fi
     echo "Доступные пользователи:"
-    for i in "${!USERS[@]}"; do
-        echo "$((i+1))) ${USERS[$i]}"
+    for i in "${!ALL_USERS[@]}"; do
+        echo "$((i+1))) ${ALL_USERS[$i]}"
     done
     exit 0
 fi
 
-if [[ "$AUTO_USER" -eq 1 ]]; then
-    mapfile -t USERS < <(list_users || true)
-    if [[ ${#USERS[@]} -eq 0 ]]; then
+if [[ ${#USERS[@]} -gt 0 ]]; then
+    for u in "${USERS[@]}"; do
+        TARGET_HOMES+=("/home/$u")
+    done
+elif [[ "$AUTO_USER" -eq 1 ]]; then
+    mapfile -t ALL_USERS < <(list_users || true)
+    if [[ ${#ALL_USERS[@]} -eq 0 ]]; then
         echo "Не найдено пользователей в /home/." >&2
         exit 1
     fi
-    USER_NAME="${USERS[0]}"
-    TARGET_HOME="/home/$USER_NAME"
+    USER_NAME="${ALL_USERS[0]}"
+    TARGET_HOMES+=("/home/$USER_NAME")
     echo "Автовыбор пользователя: $USER_NAME"
-fi
-
-if [[ "$SELECT_USER" -eq 1 ]]; then
+elif [[ "$SELECT_USER" -eq 1 ]]; then
     echo "Доступные пользователи:"
-    mapfile -t USERS < <(list_users || true)
-    if [[ ${#USERS[@]} -eq 0 ]]; then
+    mapfile -t ALL_USERS < <(list_users || true)
+    if [[ ${#ALL_USERS[@]} -eq 0 ]]; then
         echo "Не найдено пользователей в /home/." >&2
         exit 1
     fi
-    for i in "${!USERS[@]}"; do
-        echo "$((i+1))) ${USERS[$i]}"
+    for i in "${!ALL_USERS[@]}"; do
+        echo "$((i+1))) ${ALL_USERS[$i]}"
     done
     echo ""
     read -p "Выберите номер пользователя: " USER_CHOICE
-    if ! [[ "$USER_CHOICE" =~ ^[0-9]+$ ]] || (( USER_CHOICE < 1 || USER_CHOICE > ${#USERS[@]} )); then
+    if ! [[ "$USER_CHOICE" =~ ^[0-9]+$ ]] || (( USER_CHOICE < 1 || USER_CHOICE > ${#ALL_USERS[@]} )); then
         echo "Ошибка: неверный номер пользователя." >&2
         exit 1
     fi
-    USER_NAME="${USERS[$((USER_CHOICE-1))]}"
-    TARGET_HOME="/home/$USER_NAME"
+    USER_NAME="${ALL_USERS[$((USER_CHOICE-1))]}"
+    TARGET_HOMES+=("/home/$USER_NAME")
+else
+    TARGET_HOMES+=("$TARGET_HOME")
 fi
 
 REPO_OWNER="teanrus"
@@ -159,10 +164,12 @@ ARCHIVE_NAME="extensions.tar.gz"
 printf '%s\n' "============================================================"
 printf '%s\n' "Установка расширений VS Code из релиза Astra GIA"
 printf '%s\n' "============================================================"
-printf 'Целевой каталог: %s\n' "$TARGET_HOME/.vscode"
 printf 'URL архива: %s\n' "$ASSET_URL"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
+    for TH in "${TARGET_HOMES[@]}"; do
+        printf 'Целевой каталог: %s\n' "$TH/.vscode"
+    done
     printf '\nРежим dry-run: скачивание и распаковка будут пропущены.\n'
     exit 0
 fi
@@ -191,9 +198,27 @@ if [[ ! -d "$SOURCE_EXT_DIR" ]]; then
     exit 1
 fi
 
-echo "Копирование расширений в $TARGET_HOME/.vscode/ ..."
-cp -a "$SOURCE_EXT_DIR"/. "$TARGET_HOME/.vscode/"
+for TARGET_HOME in "${TARGET_HOMES[@]}"; do
+    TARGET_VSCODE="$TARGET_HOME/.vscode"
+
+    printf '%s\n' "------------------------------------------------------------"
+    printf 'Целевой каталог: %s\n' "$TARGET_VSCODE"
+
+    TARGET_USER=$(stat -c '%U' "$TARGET_HOME")
+    TARGET_GROUP=$(stat -c '%G' "$TARGET_HOME")
+
+    if [[ ! -d "$TARGET_VSCODE" ]]; then
+        mkdir -p "$TARGET_VSCODE"
+        chown $TARGET_USER:$TARGET_GROUP "$TARGET_VSCODE"
+    fi
+    
+    echo "Копирование расширений в $TARGET_VSCODE/ ..."
+    chown -R $TARGET_USER:$TARGET_GROUP "$SOURCE_EXT_DIR"
+    cp -a "$SOURCE_EXT_DIR" "$TARGET_VSCODE/"
+    
+    echo "Готово. Расширения VS Code установлены в $TARGET_VSCODE/"
+done
 
 echo "============================================================"
-echo "Готово. Расширения VS Code установлены в $TARGET_HOME/.vscode/"
+echo "Все операции завершены."
 echo "============================================================"

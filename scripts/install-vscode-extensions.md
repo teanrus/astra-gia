@@ -65,13 +65,19 @@
 ./install-vscode-extensions.sh --user student
 ```
 
-### 7. Проверка без изменения системы
+### 7. Установка для других пользователей по имени
+
+```bash
+sudo bash install-vscode-extensions.sh --user student --user gia-11
+```
+
+### 8. Проверка без изменения системы
 
 ```bash
 ./install-vscode-extensions.sh --dry-run
 ```
 
-### 8. Использование другого тега релиза
+### 9. Использование другого тега релиза
 
 ```bash
 ./install-vscode-extensions.sh --release v2.0
