@@ -507,9 +507,9 @@ else
     fi
     echo "Проверка и исправление некорректных записей репозиториев от предыдущих запусков..."
     sudo find /etc/apt/sources.list /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i \
-        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|g' \
-        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra astralinux|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|g' \
-        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|g' \
+        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' \
+        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra/ r7|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' \
+        -e 's|downloads.r7-office.ru/repository/r7-desktop-astra astralinux|downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux|g' \
         {} \; 2>/dev/null
 
     if [[ "$NUMBER" == "frozen" ]]; then
@@ -1064,7 +1064,7 @@ password gyxiLab84FByn7sCTd5JY
 EOF
 sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
 # Кодовое имя репозитория для Astra Linux согласно инструкции R7 Office.
-echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ r7 main" | sudo tee /etc/apt/sources.list.d/r7-office.list
+echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
 sudo apt-get update
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y r7-office
 fi
