@@ -27,6 +27,7 @@ SAVE_LOG=0
 UPGRADE_OS=0
 INSTALL_GROUPS=()
 INSTALL_R7_REPO=0
+INSTALL_R7_RELEASE=0
 INSTALL_MAX_REPO=0
 PACKAGE_INSTALL_FAILURES=()
 
@@ -52,6 +53,7 @@ usage() {
   --list                     Показать список доступных пакетов и категорий
   --save-log                 Сохранить вывод скрипта в файл с временной меткой
   --r7-office                Установить R7 Office через репозиторий
+  --r7-office-release        Установить R7 Office из GitHub Releases без обращения к репозиторию
   --max                      Установить MAX через репозиторий
   -h, --help                 Показать эту справку
 
@@ -115,6 +117,7 @@ print_package_list() {
 
 [extra: самостоятельные флаги]
   - R7 Office (--r7-office)
+  - R7 Office из GitHub Releases (--r7-office-release)
   - MAX (--max)
 EOF
 }
@@ -210,6 +213,10 @@ while [[ $# -gt 0 ]]; do
             INSTALL_R7_REPO=1
             shift
             ;;
+        --r7-office-release)
+            INSTALL_R7_RELEASE=1
+            shift
+            ;;
         --max)
             INSTALL_MAX_REPO=1
             shift
@@ -246,8 +253,11 @@ case "$ASTRA_VERSION" in
         ;;
 esac
 
-if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || $UPGRADE_OS -eq 1 || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
+if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || $UPGRADE_OS -eq 1 || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_R7_RELEASE:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
     AUTO_MODE=1
+fi
+if [[ "$INSTALL_R7_RELEASE" == "1" ]]; then
+    INSTALL_R7_REPO=0
 fi
 
 if [[ $SAVE_LOG -eq 0 && -t 0 ]]; then
@@ -588,6 +598,7 @@ declare -A PACKAGE_NAMES=(
     [foxit]="Foxit PDF Reader"
     [naps2]="NAPS2"
     [onlyoffice]="OnlyOffice Desktop Editors"
+    [r7-office]="R7 Office"
     [sreda]="Сервис Среда"
     [vkmessenger]="ВК Мессенджер"
     [codeblocks]="Code::Blocks"
@@ -609,6 +620,7 @@ declare -A PACKAGE_URLS=(
     [foxit]="${GITHUB_RELEASE_BASE_URL}foxitreader.deb"
     [naps2]="${GITHUB_RELEASE_BASE_URL}naps2.deb"
     [onlyoffice]="${GITHUB_RELEASE_BASE_URL}onlyoffice.deb"
+    [r7-office]="${GITHUB_RELEASE_BASE_URL}r7-office.deb"
     [sreda]="${GITHUB_RELEASE_BASE_URL}sreda.deb"
     [vkmessenger]="${GITHUB_RELEASE_BASE_URL}vk-messenger.deb"
     [codeblocks]="${GITHUB_RELEASE_BASE_URL}codeblocks.deb"
@@ -743,7 +755,9 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package foxit
                 add_group_package naps2
                 add_group_package onlyoffice
-                INSTALL_R7_REPO=1
+                if [[ "$INSTALL_R7_RELEASE" == "0" ]]; then
+                    INSTALL_R7_REPO=1
+                fi
                 INSTALL_MAX_REPO=1
                 add_group_package sreda
                 ;;
@@ -780,7 +794,9 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package pycharm
                 add_group_package python-3.12
                 add_group_package vscode
-                INSTALL_R7_REPO=1
+                if [[ "$INSTALL_R7_RELEASE" == "0" ]]; then
+                    INSTALL_R7_REPO=1
+                fi
                 add_group_package foxit
                 ;;
             all)
@@ -797,7 +813,15 @@ if [[ $AUTO_MODE -eq 1 ]]; then
     for group in "${INSTALL_GROUPS[@]}"; do
         process_group_selection "$group"
     done
-    if [[ ${#INSTALL_GROUPS[@]} -eq 0 ]]; then
+    if [[ "$INSTALL_R7_RELEASE" == "1" ]]; then
+        add_group_package r7-office
+    fi
+    if [[ ${#INSTALL_GROUPS[@]} -eq 0 \
+        && ${#URLS_TO_DOWNLOAD[@]} -eq 0 \
+        && ${#APT_PACKAGES_TO_INSTALL[@]} -eq 0 \
+        && "$INSTALL_R7_REPO" == "0" \
+        && "$INSTALL_R7_RELEASE" == "0" \
+        && "$INSTALL_MAX_REPO" == "0" ]]; then
         echo "Не выбрана ни одна категория. Ничего не добавлено в очередь." 
     fi
 else
@@ -855,6 +879,76 @@ if [[ $DRY_RUN -eq 1 ]]; then
         echo "  - MAX"
     fi
     exit 0
+fi
+
+# --- Подготовка репозитория R7 Office и выбор резервного пакета ---
+if [[ "$INSTALL_R7_REPO" == "1" ]]; then
+    echo "Настройка репозитория и установка R7 Office..."
+    R7_REPO_READY=1
+
+    if ! sudo wget -qO /etc/apt/trusted.gpg.d/r7-office.asc \
+        https://download.r7-office.ru/repos/RPM-GPG-KEY-R7-OFFICE.public; then
+        echo "ОШИБКА: не удалось загрузить ключ репозитория R7 Office." >&2
+        R7_REPO_READY=0
+    fi
+
+    if [[ "$R7_REPO_READY" -eq 1 ]] && ! sudo mkdir -p /etc/apt/auth.conf.d; then
+        echo "ОШИБКА: не удалось создать каталог конфигурации авторизации APT." >&2
+        R7_REPO_READY=0
+    fi
+
+    if [[ "$R7_REPO_READY" -eq 1 ]] && ! sudo tee /etc/apt/auth.conf.d/r7.conf > /dev/null <<EOF
+machine downloads.r7-office.ru
+login desktop
+password gyxiLab84FByn7sCTd5JY
+EOF
+    then
+        echo "ОШИБКА: не удалось записать конфигурацию авторизации APT для R7 Office." >&2
+        R7_REPO_READY=0
+    fi
+
+    if [[ "$R7_REPO_READY" -eq 1 ]] && ! sudo chmod 600 /etc/apt/auth.conf.d/r7.conf; then
+        echo "ОШИБКА: не удалось защитить файл авторизации APT для R7 Office." >&2
+        R7_REPO_READY=0
+    fi
+
+    if [[ "$R7_REPO_READY" -eq 1 ]] \
+        && ! echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" \
+            | sudo tee /etc/apt/sources.list.d/r7-office.list > /dev/null; then
+        echo "ОШИБКА: не удалось записать APT-репозиторий R7 Office." >&2
+        R7_REPO_READY=0
+    fi
+
+    R7_REPO_FAILED=0
+    if [[ "$R7_REPO_READY" -eq 1 ]]; then
+        if ! sudo apt-get update; then
+            echo "ОШИБКА: не удалось обновить списки пакетов для R7 Office." >&2
+            R7_REPO_FAILED=1
+        elif ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y r7-office; then
+            echo "ОШИБКА: не удалось установить R7 Office из репозитория." >&2
+            R7_REPO_FAILED=1
+        fi
+    else
+        R7_REPO_FAILED=1
+    fi
+
+    if [[ "$R7_REPO_FAILED" == "1" ]]; then
+        if [[ -t 0 ]]; then
+            read -r -p "Репозиторий R7 Office недоступен. Установить пакет из GitHub Releases? (y/n): " fallback_answer
+            if [[ "$fallback_answer" =~ ^[YyДд]$ ]]; then
+                if ! add_group_package r7-office; then
+                    echo "ОШИБКА: не удалось добавить резервный пакет R7 Office в очередь." >&2
+                    PACKAGE_INSTALL_FAILURES+=("R7 Office (резервный пакет)")
+                fi
+            else
+                echo "Резервная установка R7 Office пропущена."
+                PACKAGE_INSTALL_FAILURES+=("R7 Office (не установлен)")
+            fi
+        else
+            echo "Для резервной установки запустите скрипт с параметром --r7-office-release." >&2
+            PACKAGE_INSTALL_FAILURES+=("R7 Office (репозиторий недоступен; резервный пакет не выбран)")
+        fi
+    fi
 fi
 
 # === УСТАНОВКА ВЫБРАННЫХ ПАКЕТОВ ===
@@ -1050,23 +1144,6 @@ if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
         echo "Ошибка: не удалось установить выбранные пакеты из репозитория." >&2
         exit 1
     fi
-fi
-
-# --- ЭТАП 2: Установка R7 Office через репозиторий (если выбрано) ---
-if [ "$INSTALL_R7_REPO" == "1" ]; then
-echo "Настройка репозитория и установка R7 Office..."
-sudo wget -qO /etc/apt/trusted.gpg.d/r7-office.asc https://download.r7-office.ru/repos/RPM-GPG-KEY-R7-OFFICE.public
-sudo mkdir -p /etc/apt/auth.conf.d
-sudo tee /etc/apt/auth.conf.d/r7.conf > /dev/null <<EOF
-machine downloads.r7-office.ru
-login desktop
-password gyxiLab84FByn7sCTd5JY
-EOF
-sudo chmod 600 /etc/apt/auth.conf.d/r7.conf
-# Кодовое имя репозитория для Astra Linux согласно инструкции R7 Office.
-echo "deb https://downloads.r7-office.ru/repository/r7-desktop-astra/ astralinux main" | sudo tee /etc/apt/sources.list.d/r7-office.list
-sudo apt-get update
-sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y r7-office
 fi
 
 # --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
