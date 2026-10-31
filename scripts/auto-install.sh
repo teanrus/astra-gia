@@ -30,8 +30,58 @@ INSTALL_R7_REPO=0
 INSTALL_R7_RELEASE=0
 INSTALL_MAX_REPO=0
 PACKAGE_INSTALL_FAILURES=()
+SUDO_KEEPALIVE_PID=""
 
 # === ФУНКЦИИ ===
+cleanup_on_exit() {
+    if [[ -n "$SUDO_KEEPALIVE_PID" ]]; then
+        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+        wait "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+    fi
+
+    if [[ -n "${DOWNLOAD_OWNER_UID:-}" && -d "${DEB_DOWNLOAD_DIR:-}" ]]; then
+        chown -R "$DOWNLOAD_OWNER_UID:$DOWNLOAD_OWNER_GID" "$DEB_DOWNLOAD_DIR" \
+            || echo "Предупреждение: не удалось восстановить владельца временной папки." >&2
+    fi
+}
+trap cleanup_on_exit EXIT
+
+enable_sudo_auth() {
+    if (( EUID == 0 )); then
+        return 0
+    fi
+
+    if ! command sudo -v; then
+        echo "Ошибка: не удалось подтвердить права sudo." >&2
+        return 1
+    fi
+
+    sudo() {
+        command sudo -n "$@"
+    }
+
+    (
+        sleep_pid=""
+        stop_keepalive() {
+            if [[ -n "$sleep_pid" ]]; then
+                kill "$sleep_pid" 2>/dev/null || true
+                wait "$sleep_pid" 2>/dev/null || true
+            fi
+            exit 0
+        }
+        trap stop_keepalive TERM INT
+
+        while :; do
+            sleep 60 &
+            sleep_pid=$!
+            wait "$sleep_pid" || exit
+            sleep_pid=""
+            command sudo -n -v >/dev/null 2>&1 || exit
+        done
+    ) &
+    SUDO_KEEPALIVE_PID=$!
+}
+
 usage() {
     cat <<'EOF'
 Использование:
@@ -365,6 +415,9 @@ esac
 if [[ $DRY_RUN -eq 1 ]]; then
     echo "DRY-RUN: пропускаем изменение системных репозиториев и установку пакетов."
 else
+    if ! enable_sudo_auth; then
+        exit 1
+    fi
     if ! sudo rm -f "$OTHER_REPO_FILE" || ! printf '%s\n' "${REPO_LINES[@]}" | sudo tee "$REPO_FILE" >/dev/null; then
         echo "Ошибка: не удалось записать выбранный репозиторий в $REPO_FILE." >&2
         exit 1
@@ -985,7 +1038,6 @@ if [[ -n "$DOWNLOAD_OWNER_UID" ]]; then
         echo "Ошибка: не удалось назначить владельцем временной папки пользователя, запустившего скрипт." >&2
         exit 1
     fi
-    trap 'if [[ -d "$DEB_DOWNLOAD_DIR" ]]; then chown -R "$DOWNLOAD_OWNER_UID:$DOWNLOAD_OWNER_GID" "$DEB_DOWNLOAD_DIR" || echo "Предупреждение: не удалось восстановить владельца временной папки." >&2; fi' EXIT
 fi
 
 is_valid_cached_deb() {
