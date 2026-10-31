@@ -31,9 +31,24 @@ INSTALL_R7_RELEASE=0
 INSTALL_MAX_REPO=0
 PACKAGE_INSTALL_FAILURES=()
 SUDO_KEEPALIVE_PID=""
+CDROM_SOURCES_DISABLED=0
 
 # === ФУНКЦИИ ===
+restore_cdrom_sources() {
+    sudo sed -i 's|^# auto-install-disabled: ||' /etc/apt/sources.list \
+        && sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i \
+            's|^# auto-install-disabled: ||' {} \; 2>/dev/null
+}
+
 cleanup_on_exit() {
+    if [[ "$CDROM_SOURCES_DISABLED" -eq 1 ]]; then
+        if restore_cdrom_sources; then
+            CDROM_SOURCES_DISABLED=0
+        else
+            echo "Предупреждение: не удалось восстановить CD-ROM репозитории." >&2
+        fi
+    fi
+
     if [[ -n "$SUDO_KEEPALIVE_PID" ]]; then
         kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
         wait "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
@@ -557,8 +572,12 @@ if [[ $DRY_RUN -eq 1 ]]; then
     fi
 else
     echo "Отключение CD-ROM репозитория (чтобы система не просила вставить диск)..."
-    sudo sed -i '/cdrom:/ s/^/#/' /etc/apt/sources.list
-    sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^/#/' {} \; 2>/dev/null
+    CDROM_SOURCES_DISABLED=1
+    sudo sed -E -i \
+        '/^[[:space:]]*deb(-src)?[[:space:]].*cdrom:/ s|^|# auto-install-disabled: |' \
+        /etc/apt/sources.list
+    sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -E -i \
+        '/^[[:space:]]*deb(-src)?[[:space:]].*cdrom:/ s|^|# auto-install-disabled: |' {} \; 2>/dev/null
 
     echo "Подготовка раскладки клавиатуры для безынтерактивной установки..."
     if ! printf '%s\n' \
@@ -1200,19 +1219,41 @@ fi
 
 # --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
 if [ "$INSTALL_MAX_REPO" == "1" ]; then
-echo "Настройка репозитория и установка MAX..."
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" | sudo tee /etc/apt/sources.list.d/max.list
-sudo apt-get update
-sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y max
-apt-cache policy max
+    echo "Настройка репозитория и установка MAX..."
+    MAX_INSTALL_FAILED=0
+
+    if ! sudo mkdir -p /etc/apt/keyrings; then
+        echo "Ошибка: не удалось создать каталог ключей APT для MAX; продолжаем установку остальных пакетов." >&2
+        MAX_INSTALL_FAILED=1
+    elif ! (set -o pipefail; curl -fsSL https://download.max.ru/linux/deb/public.asc | sudo gpg --yes --dearmor -o /etc/apt/keyrings/max.gpg >/dev/null); then
+        echo "Ошибка: не удалось загрузить или установить ключ репозитория MAX; продолжаем установку остальных пакетов." >&2
+        MAX_INSTALL_FAILED=1
+    elif ! echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/max.gpg] https://download.max.ru/linux/deb stable main" \
+        | sudo tee /etc/apt/sources.list.d/max.list >/dev/null; then
+        echo "Ошибка: не удалось добавить репозиторий MAX; продолжаем установку остальных пакетов." >&2
+        MAX_INSTALL_FAILED=1
+    elif ! sudo apt-get update; then
+        echo "Ошибка: не удалось обновить списки пакетов для MAX; продолжаем установку остальных пакетов." >&2
+        MAX_INSTALL_FAILED=1
+    elif ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y max; then
+        echo "Ошибка: не удалось установить MAX; продолжаем установку остальных пакетов." >&2
+        MAX_INSTALL_FAILED=1
+    else
+        apt-cache policy max
+    fi
+
+    if [[ "$MAX_INSTALL_FAILED" -eq 1 ]]; then
+        PACKAGE_INSTALL_FAILURES+=("MAX (установка из репозитория)")
+    fi
 fi
 
 # --- Восстановление CD-ROM репозитория после завершения операций ---
 echo "Восстановление CD-ROM репозитория..."
-sudo sed -i '/cdrom:/ s/^#//' /etc/apt/sources.list
-sudo find /etc/apt/sources.list.d/ -type f -name "*.list" -exec sed -i '/cdrom:/ s/^#//' {} \; 2>/dev/null
+if restore_cdrom_sources; then
+    CDROM_SOURCES_DISABLED=0
+else
+    echo "Предупреждение: не удалось восстановить CD-ROM репозитории; повторная попытка при завершении." >&2
+fi
 
 # --- Сохранение кэша скачанных .deb пакетов ---
 if [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
