@@ -1,16 +1,18 @@
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![Language](https://img.shields.io/badge/Language-Kumir_2-007ACC?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Programming_Education-2E8B57?style=for-the-badge)
-
 # Алгоритмический язык Кумир 2
 
-***
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Language](https://img.shields.io/badge/Language-Kumir_2-007ACC?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Programming_Education-2E8B57?style=for-the-badge)
 
 > КуМир (Комплект Учебных МИРов) - система программирования, предназначенная для поддержки начальных курсов информатики и программирования в средней и высшей школе
 
 ## Установка среды
 
-- Скачайте с портала из Библиотеки приложений пакет: [kumir2.deb](https://easyastra.ru/store1.8/kumir2.deb)
-- Запустите его установку двойным кликом ЛКМ средствами утилиты qApt
+- Для Astra Linux Special Edition 1.8 доступен пакет из релиза проекта: [kumir2.deb](https://github.com/teanrus/astra-gia/releases/download/v2.0/kumir2.deb)
+- Установка скачанного пакета из терминала (рекомендуется):
+  - перейдите в каталог с загруженным пакетом `kumir2.deb`
+  - нажмите ПКМ внутри каталога и выберите **Открыть в терминале**
+  - выполните команду: `sudo apt install ./kumir2.deb`
+  - при запросе введите пароль пользователя и подтвердите установку
 - Запустите приложение из **Меню "Пуск" -> Научные -> Кумир Классик**
 
 ## Запуск среды и работа
