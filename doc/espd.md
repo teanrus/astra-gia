@@ -1,15 +1,13 @@
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![Network](https://img.shields.io/badge/Network-ESPD-007EC6?style=for-the-badge) ![Configuration](https://img.shields.io/badge/Configuration-Proxy-4C9F70?style=for-the-badge)
-
 # Настройка сети интернет через ЕСПД
 
-***
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Network](https://img.shields.io/badge/Network-ESPD-007EC6?style=for-the-badge) ![Configuration](https://img.shields.io/badge/Configuration-Proxy-4C9F70?style=for-the-badge)
 
 > Единая сеть передачи данных (ЕСПД) — это защищённая государственная инфраструктура, к которой подключены школы, колледжи и техникумы в рамках национальных проектов "Образование" и "Цифровая экономика". Оператором ЕСПД выступает ПАО "Ростелеком"
 
 ## Установка ПО и включение прокси
 
-- Скачайте и установите программное обеспечение **ЕСПД прокси** с портала: [espd-proxy.deb](https://easyastra.ru/utils/espd-proxy.deb) 
+- Скачайте и установите программное обеспечение **ЕСПД прокси** с портала: [espd-proxy.deb](https://easyastra.ru/utils/espd-proxy.deb)
 - Запустите установленную программу из **Меню "Пуск" - > Интернет -> ЕСПД РосТелеком** или с Рабочего стола
 - Авторизуйтесь с правами пользователя `root`
 - Укажите регион для настройки прокси из выпадающего списка
