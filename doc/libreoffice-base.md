@@ -1,9 +1,7 @@
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![Application](https://img.shields.io/badge/Application-LibreOffice-18A303?style=for-the-badge) ![Database](https://img.shields.io/badge/Database-HSQLDB-4479A1?style=for-the-badge)
-
 # Настройка LibreOffice Base для работы со встроенной базой данных
 
-***
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Application](https://img.shields.io/badge/Application-LibreOffice-18A303?style=for-the-badge) ![Database](https://img.shields.io/badge/Database-HSQLDB-4479A1?style=for-the-badge)
 
 > Система управления базами данных Base входит в поставку офисного пакета LibreOffice по умолчанию, но не позволяет создавать и работать со встроенной базой данных
 
@@ -15,8 +13,8 @@
 
 ## Создание и работа с базой данных
 
-- Запустите LibreOffice Base из Меню "Пуск" -> Офис 
-- Укажите `Создать новую базу данных` и выберите `Встроенная база данных: HSQLDB `
+- Запустите LibreOffice Base из Меню "Пуск" -> Офис
+- Укажите `Создать новую базу данных` и выберите `Встроенная база данных: HSQLDB`
 - Нажмите конпку "Далее"
 - Нажмите кнопку "Готово"
 - Задайте имя новой создаваемой базы данных и путь сохранения файла
