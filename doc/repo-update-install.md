@@ -1,20 +1,18 @@
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Packages](https://img.shields.io/badge/Packages-APT-A42E2B?style=for-the-badge) ![Repositories](https://img.shields.io/badge/Repositories-Stable_and_Frozen-6B7280?style=for-the-badge)
-
 # Подключение сетевых интернет репозиториев, обновление ОС и пакетная установка дополнительного программного обеспечения
 
-***
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![Platform](https://img.shields.io/badge/Platform-Astra_Linux_SE_1.8-0066CC?style=for-the-badge) ![Packages](https://img.shields.io/badge/Packages-APT-A42E2B?style=for-the-badge) ![Repositories](https://img.shields.io/badge/Repositories-Stable_and_Frozen-6B7280?style=for-the-badge)
 
 ## Сетевые интернет репозитории
 
 > [Интернет-репозитории Astra Linux](https://wiki.astralinux.ru/pages/viewpage.action?pageId=302043111) предназначены для обеспечения процедуры обновления ОС при наличии доступа в Интернет и позволяют выполнять установку и обновление пакетов с помощью стандартных установщиков пакетов:  [графический менеджер пакетов synaptic](https://wiki.astralinux.ru/pages/viewpage.action?pageId=27362363) и инструмент командной строки apt
 
-### Подключение репозиториев через утилиту портала Repo Update Checker
+### Подключение репозиториев через утилиту Repo Update Checker
 
 > Утилита написана для максимально простого способо активации stable/frozen репозиториев и установки обновления пакетов правильным способом
 
-- Загрузите с портала пакет: [repo-update-checker.deb](https://easyastra.ru/utils/repo-update-checker.deb)
-- Запустите установку пакета двойным кликом ЛКМ 
+- Загрузите пакет: [repo-update-checker.deb](https://github.com/teanrus/astra-gia/releases/download/v2.0/repo-update-checker.deb)
+- Запустите установку пакета двойным кликом ЛКМ
 - После завершения установки запустите приложения с ярлыка **Активация репозиториев** на Рабочем столе
 - Авторизуйтесь с правами `root` пользователя
 - Выберите ветку `stable` или `frozen` и нажмите кнопку **Активировать и обновить список пакетов**
@@ -118,7 +116,7 @@
 
 #### В графическом режиме средствами qApt
 
-- Загрузите необходимый пакет, например из [Библиотеки приложений](https://easyastra.ru/resources/store1.8.php)
+- Загрузите необходимый пакет
 - Перейдите в каталог загрузки пакета средствами Файлового менеджера
 - Двойным кликом ЛКМ запустите скачанный пакет на установку
 - Нажмите **Установить пакет**
@@ -127,7 +125,7 @@
 
 #### В режиме CLI средствами apt
 
-- Загрузите необходимый пакет, например из [Библиотеки приложений](https://easyastra.ru/resources/store1.8.php)
+- Загрузите необходимый пакет
 - Перейдите в каталог загрузки пакета средствами Файлового менеджера
 - Вызовите через **ПКМ Контекстное меню -> Открыть терминал в этой папке** или из главного меню Файлового менеджера **Сервис -> Открыть терминал**
 - Выполните команду для установки: `sudo apt -y install ./package.deb`, где package.deb = имя вашего пакета
