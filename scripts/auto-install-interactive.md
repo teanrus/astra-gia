@@ -135,7 +135,6 @@ bash auto-install.sh
 
 ## Логика рпботы интерактивного режима
 
-
 ```mermaid
 flowchart TD
     A[Запуск auto-install.sh] --> B{Флаг --help или --list?}
