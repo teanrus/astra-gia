@@ -1,7 +1,7 @@
+# Документация проекта Astra GIA
+
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 ![Topic](https://img.shields.io/badge/Topic-Documentation-6B7280?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)
-
-# Документация проекта Astra GIA
 
 Этот каталог содержит инструкции по подготовке рабочих мест на Astra Linux к проведению ГИА: настройке системы и сети, установке программ, языкам программирования и учебным приложениям.
 
