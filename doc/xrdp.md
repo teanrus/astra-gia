@@ -1,11 +1,11 @@
+# Краткое руководство по установке и использованию XRDP в Astra Linux 1.8
+
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Astra_Linux_1.8-0066CC?style=for-the-badge)](https://astralinux.ru/)
 [![XRDP](https://img.shields.io/badge/XRDP-Remote_Desktop-0078D7?style=for-the-badge&logo=windows)](https://github.com/neutrinolabs/xrdp)
 [![Shell](https://img.shields.io/badge/Shell-Bash-4EAA25?style=for-the-badge&logo=gnubash)](https://www.gnu.org/software/bash/)
-[![SysAdmin](https://img.shields.io/badge/Role-System_Administration-333333?style=for-the-badge)]()
-[![Automation](https://img.shields.io/badge/Automation-Ready-brightgreen?style=for-the-badge)]()
-
-# Краткое руководство по установке и использованию XRDP в Astra Linux 1.8
+![SysAdmin](https://img.shields.io/badge/Role-System_Administration-333333?style=for-the-badge)
+![Automation](https://img.shields.io/badge/Automation-Ready-brightgreen?style=for-the-badge)
 
 ## 1. Быстрая установка (Работает в 95% случаев)
 
@@ -80,7 +80,7 @@ unset XDG_RUNTIME_DIR
 exec fly-wm
 ```
 
-3. Сохраните (`Ctrl+O`, `Enter`, `Ctrl+X`) и перезапустите службу: `sudo systemctl restart xrdp`.
+1. Сохраните (`Ctrl+O`, `Enter`, `Ctrl+X`) и перезапустите службу: `sudo systemctl restart xrdp`.
 
 ### Проблема 3: Всплывающие окна «Authentication is required to create a color managed device»
 
@@ -100,7 +100,7 @@ ResultInactive=no
 ResultActive=yes
 ```
 
-3. Перезагрузите компьютер или службу polkit.
+1. Перезагрузите компьютер или службу polkit.
 
 ### Проблема 4: Не работает буфер обмена (Copy/Paste между Windows и Astra)
 
@@ -124,7 +124,7 @@ ResultActive=yes
 sudo xrdp-pulseaudio-installer
 ```
 
-3. В клиенте `mstsc` на вкладке «Локальные ресурсы» в разделе «Удаленный звук» нажмите «Параметры» и выберите **«Воспроизводить на этом компьютере»**.
+1. В клиенте `mstsc` на вкладке «Локальные ресурсы» в разделе «Удаленный звук» нажмите «Параметры» и выберите **«Воспроизводить на этом компьютере»**.
 
 ### Проблема 6: Ошибки, связанные с ПАРСЭК (мандатные метки)
 
