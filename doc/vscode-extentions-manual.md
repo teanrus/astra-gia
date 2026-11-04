@@ -1,20 +1,25 @@
-[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
-![IDE](https://img.shields.io/badge/IDE-VS_Code-007ACC?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Extensions-6B7280?style=for-the-badge) ![Install](https://img.shields.io/badge/Install-Manual-2E8B57?style=for-the-badge)
-
 # Установка расширений в VS Code самостоятельно без Менеджера плагинов
 
-***
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
+![IDE](https://img.shields.io/badge/IDE-VS_Code-007ACC?style=for-the-badge) ![Topic](https://img.shields.io/badge/Topic-Extensions-6B7280?style=for-the-badge) ![Install](https://img.shields.io/badge/Install-Manual-2E8B57?style=for-the-badge)
 
 > Механизм установки расширений среды разработки VS Code для язков **C, C++, C#, Python, Java** и русской локализации интерфейса в случае невозможности их установки встроенным Менеджером расширений
 
 ## Установка среды и расширений
 
-- Скачайте и установите пакет среды из Библиотеки приложений потрала: [code.deb](https://easyastra.ru/store1.8/code.deb)
+- Скачайте редактор одним из способов:
+  - Официальная страница загрузки: [Visual Studio Code](https://code.visualstudio.com/download)
+  - Для Astra Linux Special Edition 1.8 доступен пакет из релиза проекта: [Astra-GIA](https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb)
+- Установка скачанного пакета из терминала (рекомендуется):
+  - перейдите в каталог с загруженным пакетом `code.deb`
+  - нажмите ПКМ внутри каталога и выберите **Открыть в терминале**
+  - выполните команду: `sudo apt install ./code.deb`
+  - при запросе введите пароль пользователя и подтвердите установку
 - Запустите среду один раз в сессии требуемого пользователя и сразу закройте
-- Скачайте архив с расширениями: [extensions.tar.gz](https://easyastra.ru/resources/EGE/extensions.tar.gz)
+- Скачайте архив с расширениями: [extensions.tar.gz](https://github.com/teanrus/astra-gia/releases/download/v2.0/extensions.tar.gz)
 
 ```bash
-wget https://easyastra.ru/resources/EGE/extensions.tar.gz
+wget https://github.com/teanrus/astra-gia/releases/download/v2.0/extensions.tar.gz
 ```
 
 Распакуйте скачанный архив
