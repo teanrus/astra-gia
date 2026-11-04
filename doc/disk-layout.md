@@ -1,9 +1,9 @@
+# 📖 Руководство по разметке диска для (*) Linux
+
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-Astra_Linux-0066CC?style=for-the-badge)
 ![Topic](https://img.shields.io/badge/Topic-Disk_Partitioning-6B7280?style=for-the-badge)
 ![Storage](https://img.shields.io/badge/Storage-SSD-555555?style=for-the-badge)
-
-# 📖 Руководство по разметке диска для (*) Linux
 
 >Текущая схема — **оптимальный баланс** между безопасностью, удобством и производительностью. Она подходит для SSD-накопителей объемом от 256 ГБ.
 
