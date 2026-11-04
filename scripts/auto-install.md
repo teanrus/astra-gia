@@ -1,11 +1,11 @@
+# Скрипт `auto-install.sh` Общее описание, требования и принцип работы
+
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Astra_Linux_1.8-0066CC?style=for-the-badge)](https://astralinux.ru/)
 [![Content](https://img.shields.io/badge/Content-Shell_Scripts-4EAA25?style=for-the-badge)](https://www.gnu.org/software/bash/)
 ![Purpose](https://img.shields.io/badge/Purpose-Automation-2E8B57?style=for-the-badge)
 
 ![Logo](/assets/astra-gia-auto-install.png)
-
-# Скрипт `auto-install.sh` Общее описание, требования и принцип работы
 
 >`auto-install.sh` — Bash-скрипт для подготовки репозиториев и установки выбранного программного обеспечения на Astra Linux Special Edition 1.8 (x86_64). Скрипт поддерживает два способа выбора приложений:
 
