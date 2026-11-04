@@ -1,11 +1,11 @@
+# Интерактивный режим `auto-install.sh`
+
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Astra_Linux_1.8-0066CC?style=for-the-badge)](https://astralinux.ru/)
 [![Shell](https://img.shields.io/badge/Language-Bash-4EAA25?style=for-the-badge)](https://www.gnu.org/software/bash/)
 [![Automation](https://img.shields.io/badge/Automation-Software_Install-00A6A6?style=for-the-badge)](https://github.com/teanrus/astra-gia/blob/main/scripts/auto-install.md)
 
 ![Logo](/assets/auto-install-interactive.png)
-
-# Интерактивный режим `auto-install.sh`
 
 - [Общее описание скрипта](./auto-install.md)
 - [CLI-режим](./auto-install-cli.md)
