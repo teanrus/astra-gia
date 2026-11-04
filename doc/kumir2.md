@@ -8,11 +8,16 @@
 ## Установка среды
 
 - Для Astra Linux Special Edition 1.8 доступен пакет из релиза проекта: [kumir2.deb](https://github.com/teanrus/astra-gia/releases/download/v2.0/kumir2.deb)
-- Установка скачанного пакета из терминала (рекомендуется):
-  - перейдите в каталог с загруженным пакетом `kumir2.deb`
-  - нажмите ПКМ внутри каталога и выберите **Открыть в терминале**
-  - выполните команду: `sudo apt install ./kumir2.deb`
-  - при запросе введите пароль пользователя и подтвердите установку
+- Скачайте пакет и файл контрольной суммы, затем проверьте пакет:
+
+  ```bash
+  wget https://github.com/teanrus/astra-gia/releases/download/v2.0/kumir2.deb &&
+  wget https://github.com/teanrus/astra-gia/releases/download/v2.0/kumir2.deb.sha256 &&
+  sha256sum -c kumir2.deb.sha256 &&
+  sudo apt install ./kumir2.deb
+  ```
+
+  Команда установки запустится только если проверка вывела `kumir2.deb: OK`. При запросе введите пароль пользователя.
 - Запустите приложение из **Меню "Пуск" -> Научные -> Кумир Классик**
 
 ## Запуск среды и работа

@@ -19,11 +19,16 @@
 - Скачайте редактор одним из способов:
   - Официальная страница загрузки: [Visual Studio Code](https://code.visualstudio.com/download)
   - Для Astra Linux Special Edition 1.8 доступен пакет из релиза проекта: [Astra-GIA](https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb)
-- Установка скачанного пакета из терминала (рекомендуется):
-  - перейдите в каталог с загруженным пакетом `code*.deb`
-  - нажмите ПКМ внутри каталога и выберите **Открыть в терминале**
-  - выполните команду: `sudo apt install ./code*.deb`
-  - при запросе введите пароль пользователя и подтвердите установку
+- Чтобы скачать пакет и проверить его контрольную сумму, откройте терминал в каталоге загрузки и выполните:
+
+  ```bash
+  wget https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb &&
+  wget https://github.com/teanrus/astra-gia/releases/download/v2.0/code.deb.sha256 &&
+  sha256sum -c code.deb.sha256 &&
+  sudo apt install ./code.deb
+  ```
+
+  Команда установки запустится только если проверка завершилась сообщением `code.deb: OK`. При запросе введите пароль пользователя.
 - Запустите редактор из **Меню "Пуск" -> Разработка -> Visual Studio Code**
 - Перейдите в разде расширений (левая панель Меню) и установите расширение, найдя в поиске, для C# - **C# Dev Kit от Microsoft**
 - При необходимости доустановите расширение поддержки русской локализации интерфейса программы - **Russian Languge Pack for Visual Studio Code от Microsoft**

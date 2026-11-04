@@ -12,7 +12,16 @@
 > Утилита написана для максимально простого способо активации stable/frozen репозиториев и установки обновления пакетов правильным способом
 
 - Загрузите пакет: [repo-update-checker.deb](https://github.com/teanrus/astra-gia/releases/download/v2.0/repo-update-checker.deb)
-- Запустите установку пакета двойным кликом ЛКМ
+- Откройте терминал в каталоге загрузки, скачайте файл контрольной суммы и проверьте пакет:
+
+  ```bash
+  wget https://github.com/teanrus/astra-gia/releases/download/v2.0/repo-update-checker.deb &&
+  wget https://github.com/teanrus/astra-gia/releases/download/v2.0/repo-update-checker.deb.sha256 &&
+  sha256sum -c repo-update-checker.deb.sha256 &&
+  sudo apt install ./repo-update-checker.deb
+  ```
+
+  Команда установки запустится только если проверка вывела `repo-update-checker.deb: OK`.
 - После завершения установки запустите приложения с ярлыка **Активация репозиториев** на Рабочем столе
 - Авторизуйтесь с правами `root` пользователя
 - Выберите ветку `stable` или `frozen` и нажмите кнопку **Активировать и обновить список пакетов**
