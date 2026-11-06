@@ -313,7 +313,7 @@ fi
 
 FROZEN_VERSION=""
 case "$ASTRA_VERSION" in
-    1.8.4|1.8.5|1.8.6)
+    1.8.4|1.8.5|1.8.6|1.8.7)
         FROZEN_VERSION="$ASTRA_VERSION"
         ;;
 esac
