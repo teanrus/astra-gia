@@ -1,12 +1,10 @@
 # Прикладное программное обеспечение
 
-Библиотека приложений содержит необходимые программы и утилиты для осуществления деятельности образовательной организацией в среде ОС Astra Linux SE 1.8. Приложения распространяются в виде установочных deb-пакетов
-
-Собираются пакеты, отсутствующие (имеющие устаревшую версию) в официальном репозитории ОС Astra Linux SE 1.8 или распространяемые разработчиком в «неудобном» для конечного пользователя виде
+>Библиотека приложений содержит необходимые программы и утилиты для осуществления деятельности образовательной организацией в среде ОС Astra Linux SE 1.8. Приложения распространяются в виде установочных deb-пакетов
 
 ## 📁 Офис
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/boomaga.png" alt="Boomaga" width="48"> | **Boomaga** (3.0.0) | Программа предоставляет виртуальный принтер для CUPS, так же ее можно использовать для предварительного просмотра или печати PDF буклетов | [boomaga.org](https://www.boomaga.org) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/FoxitPDFReader.png" alt="Foxit PDF Reader" width="48"> | **Foxit PDF Reader** (2.4.5.0727) | Программа для просмотра, редактирования, аннотирования и работы с PDF-файлами | [foxit.com](https://www.foxit.com) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
@@ -25,7 +23,7 @@
 
 ## 🌐 Интернет
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/AlgoriusNetViewer.png" alt="Algorius Net Viewer" width="48"> | **Algorius Net Viewer** (2026.6.1) | Комплексный программный продукт для визуализации, администрирования, мониторинга и инвентаризации компьютерной сети любого уровня | [algorius.ru](https://algorius.ru) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/anydesk.png" alt="AnyDesk" width="48"> | **AnyDesk** (8.1.0) | Программное обеспечение для удалённого доступа, управления и обслуживания компьютеров и других конечных устройств | [anydesk.com](https://anydesk.com) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
@@ -63,7 +61,7 @@
 
 ## 🎨 Графика
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/bambu-studio.png" alt="Bambu Studio" width="48"> | **Bambu Studio** (1.10.1.50) | Бесплатный 3D-слайсер для печати. Преобразует инструкции печати в G-код | [bambulab.com](https://bambulab.com) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/Blender.png" alt="Blender" width="48"> | **Blender** (5.2.2) | Профессиональное свободное и открытое ПО для создания трёхмерной компьютерной графики | [blender.org](https://blender.org) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
@@ -103,7 +101,7 @@
 
 ## 🎬 Мультимедиа
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/aegisub.png" alt="Aegisub" width="48"> | **Aegisub** (3.4.2) | Кроссплатформенный редактор субтитров с открытым исходным кодом | [aegisub.org](https://aegisub.org) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/ardour.png" alt="Ardour" width="48"> | **Ardour** (8.10.0) | Аудиоредактор и цифровая звуковая рабочая станция | [ardour.org](https://ardour.org) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
@@ -132,7 +130,7 @@
 
 ## 🔬 Научные и образовательные
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/AFCE.png" alt="AFCE" width="48"> | **AFCE** (0.9.9) | Редактор блок-схем алгоритмов с генерацией кода и векторной графикой | [viktor-zin.github.io/afce/](https://viktor-zin.github.io/afce/) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/BabyType.png" alt="BabyType" width="48"> | **BabyType** (1.0) | Клавиатурный тренажер для самых маленьких, приложение из далеких 90-х для ОС ms-dos | [easyastra.ru](https://easyastra.ru) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
@@ -174,7 +172,7 @@
 
 ## 💻 Разработка
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/androidstudio.png" alt="Android Studio" width="48"> | **Android Studio** (2026.1.4) | Среда разработки от Google для создания Android-приложений | [developer.android.com/studio](https://developer.android.com/studio) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/arduino_ide.png" alt="Arduino IDE 1.X" width="48"> | **Arduino IDE 1.X** (1.8.19) | Интегрированная среда разработки для Arduino-совместимых плат | [arduino.cc](https://arduino.cc) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
@@ -226,7 +224,7 @@
 
 ## 🛠️ Утилиты
 
-| Иконка | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
+| | Название и версия | Описание | Официальный сайт | Ссылка на скачивание |
 | --- | --- | --- | --- | --- |
 | <img src="assets/soft/borg.png" alt="Borg Backup (+Vorta)" width="48"> | **Borg Backup (+Vorta)** (2.0.0) | Свободный настольный клиент Vorta для резервного копирования средствами Borg Backup | [borgbackup.readthedocs.io](https://borgbackup.readthedocs.io) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
 | <img src="assets/soft/btop.png" alt="Btop++" width="48"> | **Btop++** (1.4.5) | Система мониторинга потребления ресурсов операционной системы на ядре Linux | [github.com/aristocratos/btop](https://github.com/aristocratos/btop) | [Скачать пакет](https://github.com/teanrus/astra-gia/releases/tag/v2.0) |
