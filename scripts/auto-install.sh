@@ -171,6 +171,7 @@ print_package_list() {
   - КуМир 2
   - Basic 256
   - Code::Blocks
+  - Eclipse IDE for C/C++ Developers 2026.09
   - Eclipse IDE for Java Developers 2026.09
   - IDLE 3 (Python 3.11)
   - Notepad++ 8.9.8.1
@@ -864,6 +865,7 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package kumir
                 add_group_apt basic256
                 add_group_package codeblocks
+                add_group_package eclipse-cpp
                 add_group_package eclipse-java
                 add_group_apt idle
                 add_group_package notepadplus
