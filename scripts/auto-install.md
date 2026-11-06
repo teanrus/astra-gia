@@ -45,6 +45,7 @@
 | Eclipse IDE for Java Developers 2026.09 | `.deb` из GitHub Releases проекта |
 | Notepad++ 8.9.8.1 | `.deb` из GitHub Releases проекта |
 | PascalABC.NET | `.deb` из GitHub Releases проекта |
+| Geany | среда разработки программного обеспечения на GTK; `.deb` и контрольная сумма SHA-256 из GitHub Releases проекта |
 | КуМир 2 | `.deb` из GitHub Releases проекта |
 | Basic 256 | пакет `basic256` из выбранного репозитория Astra |
 | Code::Blocks | `.deb` из GitHub Releases проекта |

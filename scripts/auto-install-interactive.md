@@ -84,6 +84,7 @@ bash auto-install.sh
 | 17 | PascalABC.NET | `.deb` проекта |
 | 18 | PyCharm | `.deb` проекта |
 | 19 | Visual Studio Code | `.deb` проекта |
+| 20 | Geany (среда разработки на GTK) | `.deb` из GitHub Releases проекта; SHA-256 проверяется по `geany.deb.sha256` |
 
 #### Раздел 2: приложения из собственных репозиториев
 

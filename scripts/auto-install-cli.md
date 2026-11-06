@@ -49,16 +49,16 @@ bash auto-install.sh --repo stable --office --internet
 | --- | --- |
 | `--office` | Foxit PDF Reader, NAPS2, OnlyOffice Desktop Editors, Сервис Среда, R7 Office, MAX |
 | `--internet` | ВК Мессенджер, Сервис Среда, MAX, Яндекс Браузер |
-| `--programming` | Code::Blocks, Eclipse IDE for C/C++ Developers 2026.09, Eclipse IDE for Java Developers 2026.09, IDLE (пакет `idle`), Notepad++ 8.9.8.1, PascalABC.NET, PyCharm, Visual Studio Code, Python 3.12.13 |
+| `--programming` | Code::Blocks, Eclipse IDE for C/C++ Developers 2026.09, Eclipse IDE for Java Developers 2026.09, IDLE (пакет `idle`), Notepad++ 8.9.8.1, PascalABC.NET, PyCharm, Visual Studio Code, Geany, Python 3.12.13 |
 | `--graphics` | Scribus, Audacity, OBS Studio |
-| `--edu` | КуМир 2, Basic 256, Code::Blocks, Eclipse IDE for Java Developers 2026.09, IDLE (пакет `idle`), Notepad++ 8.9.8.1, PascalABC.NET, PyCharm, Python 3.12.13, Visual Studio Code, R7 Office, Foxit PDF Reader |
+| `--edu` | КуМир 2, Basic 256, Code::Blocks, Eclipse IDE for Java Developers 2026.09, IDLE (пакет `idle`), Notepad++ 8.9.8.1, PascalABC.NET, PyCharm, Python 3.12.13, Visual Studio Code, Geany, R7 Office, Foxit PDF Reader |
 | `--all`, `--full-os` | Объединение всех наборов выше; повторяющиеся приложения добавляются один раз. |
 | `--browsers-only` | Тот же состав, что `--internet`. |
 | `--education-only` | Тот же состав, что `--edu`. |
 
 R7 Office и MAX также можно выбрать отдельно. Яндекс Браузер, IDLE, Basic 256, Scribus и Audacity устанавливаются через `apt` из выбранных источников Astra. Остальные приложения категорий устанавливаются из `.deb` проекта либо из соответствующих сторонних репозиториев R7/MAX.
 
-Python в категориях всегда выбирается версии 3.12.13. Остальные версии доступны через интерактивный выбор. `--programming` включает Eclipse для C/C++, `--edu` включает Eclipse для Java.
+Python в категориях всегда выбирается версии 3.12.13. Остальные версии доступны через интерактивный выбор. `--programming` включает Eclipse для C/C++, `--edu` включает Eclipse для Java. Geany — среда разработки, написанная с использованием библиотеки GTK; пакет `geany.deb` загружается из GitHub Releases с проверкой SHA-256.
 
 ## Автоматический выбор репозитория и подготовка
 

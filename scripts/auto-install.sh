@@ -159,6 +159,7 @@ print_package_list() {
   - PascalABC.NET
   - PyCharm
   - Visual Studio Code
+  - Geany (среда разработки на GTK)
   - Python 3.12.13
 
 [graphics]
@@ -177,6 +178,7 @@ print_package_list() {
   - PyCharm
   - Python 3.12.13
   - Visual Studio Code
+  - Geany (среда разработки на GTK)
   - R7 Office
   - Foxit PDF Reader
 
@@ -680,6 +682,7 @@ declare -A PACKAGE_NAMES=(
     [pascalabc]="PascalABC.NET"
     [pycharm]="PyCharm"
     [vscode]="Visual Studio Code"
+    [geany]="Geany (среда разработки на GTK)"
     [python-3.9]="Python 3.9.25"
     [python-3.10]="Python 3.10.20"
     [python-3.12]="Python 3.12.13"
@@ -702,6 +705,7 @@ declare -A PACKAGE_URLS=(
     [pascalabc]="${GITHUB_RELEASE_BASE_URL}pascalABC.deb"
     [pycharm]="${GITHUB_RELEASE_BASE_URL}pycharm.deb"
     [vscode]="${GITHUB_RELEASE_BASE_URL}code.deb"
+    [geany]="${GITHUB_RELEASE_BASE_URL}geany.deb"
     [python-3.9]="${GITHUB_RELEASE_BASE_URL}python-3.9.25-alse1.8-amd64.deb"
     [python-3.10]="${GITHUB_RELEASE_BASE_URL}python-3.10.20-alse1.8-amd64.deb"
     [python-3.12]="${GITHUB_RELEASE_BASE_URL}python-3.12.13-alse1.8-amd64.deb"
@@ -848,6 +852,7 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package pascalabc
                 add_group_package pycharm
                 add_group_package vscode
+                add_group_package geany
                 add_group_package python-3.12
                 ;;
             graphics)
@@ -866,6 +871,7 @@ if [[ $AUTO_MODE -eq 1 ]]; then
                 add_group_package pycharm
                 add_group_package python-3.12
                 add_group_package vscode
+                add_group_package geany
                 if [[ "$INSTALL_R7_RELEASE" == "0" ]]; then
                     INSTALL_R7_REPO=1
                 fi
@@ -917,6 +923,7 @@ else
     ask_deb pascalabc
     ask_deb pycharm
     ask_deb vscode
+    ask_deb geany
 
     echo ""
     echo "=== РАЗДЕЛ 2: УСТАНОВКА ИЗ ОФИЦИАЛЬНЫХ РЕПОЗИТОРИЕВ ==="
