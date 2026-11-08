@@ -689,6 +689,7 @@ declare -A PACKAGE_NAMES=(
     [python-3.12]="Python 3.12.13"
     [python-3.13]="Python 3.13.15"
     [python-3.14]="Python 3.14.7"
+    [python-3.15]="Python 3.15.0"
     [obs]="OBS Studio"
     [kumir]="КуМир 2"
 )
@@ -712,6 +713,7 @@ declare -A PACKAGE_URLS=(
     [python-3.12]="${GITHUB_RELEASE_BASE_URL}python-3.12.13-alse1.8-amd64.deb"
     [python-3.13]="${GITHUB_RELEASE_BASE_URL}python-3.13.15-alse1.8-amd64.deb"
     [python-3.14]="${GITHUB_RELEASE_BASE_URL}python-3.14.7-alse1.8-amd64.deb"
+    [python-3.15]="${GITHUB_RELEASE_BASE_URL}python-3.15.0-alse1.8-amd64.deb"
     [obs]="${GITHUB_RELEASE_BASE_URL}obs-studio.deb"
     [kumir]="${GITHUB_RELEASE_BASE_URL}kumir2.deb"
 )
@@ -798,8 +800,9 @@ echo "  2) Python 3.10.20"
 echo "  3) Python 3.12.13"
 echo "  4) Python 3.13.15"
 echo "  5) Python 3.14.7"
+echo "  6) Python 3.15.0"
 echo "  0) Пропустить"
-read -p "Выберите версию (1-5 или 0): " py_ans
+read -p "Выберите версию (1-6 или 0): " py_ans
 local py_key=""
 case $py_ans in
 1) py_key="python-3.9" ;;
@@ -807,6 +810,7 @@ case $py_ans in
 3) py_key="python-3.12" ;;
 4) py_key="python-3.13" ;;
 5) py_key="python-3.14" ;;
+6) py_key="python-3.15" ;;
 *)
 echo -e "\e[33m  -> Пропущено.\e[0m"
 return
