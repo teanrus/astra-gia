@@ -942,7 +942,7 @@ declare -A PACKAGE_URLS=(
     [cryptopro-archive]="${GITHUB_RELEASE_BASE_URL}linux-amd64_deb.tgz"
     [cryptopro-pki-plugin]="${GITHUB_RELEASE_BASE_URL}cprocsp-pki-plugin-64_2.0.15820-1_amd64.deb"
     [cryptopro-pki-cades]="${GITHUB_RELEASE_BASE_URL}cprocsp-pki-cades-64_2.0.15820-1_amd64.deb"
-    [rutoken-pkcs11]="${GITHUB_RELEASE_BASE_URL}librtpkcs11ecp_2.22.1.0-1_amd64.deb"
+    [rutoken-pkcs11]="${GITHUB_RELEASE_BASE_URL}librtpkcs11ecp_2.21.3.0-1_amd64.deb"
     [rutoken-browser-plugin]="${GITHUB_RELEASE_BASE_URL}libnpRutokenPlugin_4.13.0-1_amd64.deb"
     [rutoken-ifd]="${GITHUB_RELEASE_BASE_URL}ifd-rutokens_1.0.4_amd64.deb"
 )

@@ -68,7 +68,7 @@
 | --- | --- |
 | КриптоПро CSP 5 | `linux-amd64_deb.tgz` из релиза; устанавливаются Debian-пакеты CSP из архива и `pcsc-tools` |
 | КриптоПро CAdES | `cprocsp-pki-plugin-64_2.0.15820-1_amd64.deb` и `cprocsp-pki-cades-64_2.0.15820-1_amd64.deb` из релиза |
-| Рутокен | `librtpkcs11ecp_2.22.1.0-1_amd64.deb`, `libnpRutokenPlugin_4.13.0-1_amd64.deb` и `ifd-rutokens_1.0.4_amd64.deb` из релиза |
+| Рутокен | `librtpkcs11ecp_2.21.3.0-1_amd64.deb`, `libnpRutokenPlugin_4.13.0-1_amd64.deb` и `ifd-rutokens_1.0.4_amd64.deb` из релиза |
 
 ## Требования
 
