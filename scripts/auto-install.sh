@@ -30,6 +30,7 @@ INSTALL_R7_REPO=0
 INSTALL_R7_RELEASE=0
 INSTALL_MAX_REPO=0
 PACKAGE_INSTALL_FAILURES=()
+declare -a DESKTOP_PACKAGE_IDS=()
 SUDO_KEEPALIVE_PID=""
 CDROM_SOURCES_DISABLED=0
 
@@ -228,6 +229,131 @@ detect_astra_version() {
 
     echo "Ошибка: не удалось определить версию Astra Linux 1.8 из /etc/astra_version или /etc/os-release." >&2
     return 1
+}
+
+create_desktop_shortcuts() {
+    local user_uid user_record username user_home desktop_dir package_id package_status
+    local package_files desktop_file desktop_name target answer
+    local -a desktop_files=()
+    local -A seen_desktop_files=()
+
+    if [[ ${#DESKTOP_PACKAGE_IDS[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    for package_id in "${DESKTOP_PACKAGE_IDS[@]}"; do
+        if ! package_status=$(dpkg-query -W -f='${db:Status-Status}' "$package_id" 2>/dev/null); then
+            echo "Предупреждение: не удалось проверить установленный пакет $package_id; ярлыки для него пропущены." >&2
+            continue
+        fi
+        if [[ "$package_status" != "installed" ]]; then
+            continue
+        fi
+        if ! package_files=$(dpkg-query -L "$package_id" 2>/dev/null); then
+            echo "Предупреждение: не удалось получить список файлов пакета $package_id." >&2
+            continue
+        fi
+
+        while IFS= read -r desktop_file; do
+            [[ "$desktop_file" == /usr/share/applications/*.desktop && -f "$desktop_file" ]] || continue
+            [[ ${seen_desktop_files["$desktop_file"]+present} ]] && continue
+            seen_desktop_files["$desktop_file"]=1
+            grep -qx 'Type=Application' "$desktop_file" || continue
+            grep -Eiq '^(Hidden|NoDisplay)[[:space:]]*=[[:space:]]*true([[:space:]]|$)' "$desktop_file" && continue
+            desktop_files+=("$desktop_file")
+        done <<< "$package_files"
+    done
+
+    if [[ ${#desktop_files[@]} -eq 0 ]]; then
+        echo "Для выбранных пакетов не найдены ярлыки устанавливаемых приложений."
+        return 0
+    fi
+    if [[ ! -t 0 ]]; then
+        echo "Создание ярлыков пропущено: для подтверждения нужен интерактивный терминал."
+        return 0
+    fi
+
+    printf 'Найдены ярлыки приложений:\n'
+    for desktop_file in "${desktop_files[@]}"; do
+        printf '  - %s\n' "$(basename "$desktop_file" .desktop)"
+    done
+    read -r -p "Создать ярлыки на рабочем столе? (y/n): " answer
+    if [[ ! "$answer" =~ ^[YyДд]$ ]]; then
+        echo "Создание ярлыков пропущено."
+        return 0
+    fi
+
+    if (( EUID == 0 )); then
+        user_uid="${SUDO_UID:-}"
+        if [[ ! "$user_uid" =~ ^[1-9][0-9]*$ ]]; then
+            user_uid=$(stat -c %u -- "$PWD") || {
+                echo "Ошибка: не удалось определить пользователя рабочего стола." >&2
+                return 1
+            }
+        fi
+    else
+        user_uid=$(id -u) || {
+            echo "Ошибка: не удалось определить пользователя рабочего стола." >&2
+            return 1
+        }
+    fi
+    if [[ ! "$user_uid" =~ ^[1-9][0-9]*$ ]]; then
+        echo "Ошибка: запуск от root без пользователя рабочего стола; ярлыки создать нельзя." >&2
+        return 1
+    fi
+
+    user_record=$(getent passwd "$user_uid") || {
+        echo "Ошибка: не удалось получить данные пользователя с UID $user_uid." >&2
+        return 1
+    }
+    IFS=: read -r username _ _ _ _ user_home _ <<< "$user_record"
+    if [[ -z "$username" || -z "$user_home" ]]; then
+        echo "Ошибка: не удалось определить имя пользователя или домашний каталог для UID $user_uid." >&2
+        return 1
+    fi
+
+    desktop_dir=""
+    if command -v xdg-user-dir >/dev/null 2>&1; then
+        desktop_dir=$(sudo -u "$username" env HOME="$user_home" xdg-user-dir DESKTOP 2>/dev/null || true)
+    fi
+    if [[ -z "$desktop_dir" || "$desktop_dir" != /* ]]; then
+        desktop_dir="$user_home/Desktop"
+    fi
+    if ! sudo -u "$username" mkdir -p -- "$desktop_dir"; then
+        echo "Ошибка: не удалось подготовить рабочий стол: $desktop_dir." >&2
+        return 1
+    fi
+    if ! sudo -u "$username" test -w "$desktop_dir"; then
+        echo "Ошибка: у пользователя $username нет доступа на запись в $desktop_dir." >&2
+        return 1
+    fi
+
+    for desktop_file in "${desktop_files[@]}"; do
+        desktop_name=$(basename "$desktop_file")
+        target="$desktop_dir/$desktop_name"
+        if sudo -u "$username" test -e "$target"; then
+            echo "Ярлык уже существует, оставлен без изменений: $target"
+            continue
+        fi
+        if sudo -u "$username" bash -s -- "$desktop_dir" "$desktop_file" "$desktop_name" <<'USER_SCRIPT'
+set -eu
+desktop_dir=$1
+source_file=$2
+desktop_name=$3
+temporary_file=$(mktemp "$desktop_dir/.auto-install.XXXXXX")
+trap 'rm -f -- "$temporary_file"' EXIT
+cp -- "$source_file" "$temporary_file"
+chmod 755 "$temporary_file"
+ln -- "$temporary_file" "$desktop_dir/$desktop_name"
+USER_SCRIPT
+        then
+            echo "Создан ярлык: $target"
+        elif sudo -u "$username" test -e "$target"; then
+            echo "Ярлык уже существует, оставлен без изменений: $target"
+        else
+            echo "Предупреждение: не удалось создать ярлык $target." >&2
+        fi
+    done
 }
 
 # === ОСНОВНОЙ СЦЕНАРИЙ: АРГУМЕНТЫ И ОПРЕДЕЛЕНИЕ ОС ===
@@ -1012,6 +1138,8 @@ EOF
         elif ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y r7-office; then
             echo "ОШИБКА: не удалось установить R7 Office из репозитория." >&2
             R7_REPO_FAILED=1
+        else
+            DESKTOP_PACKAGE_IDS+=("r7-office")
         fi
     else
         R7_REPO_FAILED=1
@@ -1188,6 +1316,8 @@ DEB_NAMES_TO_INSTALL=("${VALID_DEB_NAMES[@]}")
 
 declare -a INSTALLABLE_DEB_FILES=()
 declare -a INSTALLABLE_DEB_NAMES=()
+declare -a INSTALLABLE_DEB_PACKAGE_IDS=()
+declare -a DEB_PACKAGE_IDS_TO_INSTALL=()
 for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
     package_id=$(dpkg-deb -f "${DEB_FILES_TO_INSTALL[$i]}" Package)
     package_version=$(dpkg-deb -f "${DEB_FILES_TO_INSTALL[$i]}" Version)
@@ -1198,17 +1328,23 @@ for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
     fi
     INSTALLABLE_DEB_FILES+=("${DEB_FILES_TO_INSTALL[$i]}")
     INSTALLABLE_DEB_NAMES+=("${DEB_NAMES_TO_INSTALL[$i]}")
+    INSTALLABLE_DEB_PACKAGE_IDS+=("$package_id")
 done
 DEB_FILES_TO_INSTALL=("${INSTALLABLE_DEB_FILES[@]}")
 DEB_NAMES_TO_INSTALL=("${INSTALLABLE_DEB_NAMES[@]}")
+DEB_PACKAGE_IDS_TO_INSTALL=("${INSTALLABLE_DEB_PACKAGE_IDS[@]}")
 
 if [[ ${#DEB_FILES_TO_INSTALL[@]} -gt 0 ]]; then
     echo "Установка скачанных пакетов (с автоматической подгрузкой зависимостей)..."
     # Используем -f (fix-broken), чтобы apt сам подтянул недостающие пакеты из сети
-    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[@]}"; then
+    if sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[@]}"; then
+        DESKTOP_PACKAGE_IDS+=("${DEB_PACKAGE_IDS_TO_INSTALL[@]}")
+    else
         echo "Предупреждение: групповая установка .deb завершилась ошибкой; проверяю пакеты по одному." >&2
         for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
-            if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[$i]}"; then
+            if sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${DEB_FILES_TO_INSTALL[$i]}"; then
+                DESKTOP_PACKAGE_IDS+=("${DEB_PACKAGE_IDS_TO_INSTALL[$i]}")
+            else
                 echo "ОШИБКА: пакет «${DEB_NAMES_TO_INSTALL[$i]}» не установлен; перехожу к следующему." >&2
                 PACKAGE_INSTALL_FAILURES+=("${DEB_NAMES_TO_INSTALL[$i]}")
             fi
@@ -1228,6 +1364,7 @@ if [ ${#APT_PACKAGES_TO_INSTALL[@]} -gt 0 ]; then
         echo "Ошибка: не удалось установить выбранные пакеты из репозитория." >&2
         exit 1
     fi
+    DESKTOP_PACKAGE_IDS+=("${APT_PACKAGES_TO_INSTALL[@]}")
 fi
 
 # --- ЭТАП 3: Установка MAX через репозиторий (если выбрано) ---
@@ -1252,6 +1389,7 @@ if [ "$INSTALL_MAX_REPO" == "1" ]; then
         echo "Ошибка: не удалось установить MAX; продолжаем установку остальных пакетов." >&2
         MAX_INSTALL_FAILED=1
     else
+        DESKTOP_PACKAGE_IDS+=("max")
         apt-cache policy max
     fi
 
@@ -1271,6 +1409,10 @@ fi
 # --- Сохранение кэша скачанных .deb пакетов ---
 if [[ -n "${DEB_DOWNLOAD_DIR:-}" && -d "$DEB_DOWNLOAD_DIR" ]]; then
     echo "Проверенные .deb-пакеты оставлены в кэше: $DEB_DOWNLOAD_DIR"
+fi
+
+if ! create_desktop_shortcuts; then
+    echo "Предупреждение: не удалось завершить создание ярлыков рабочего стола." >&2
 fi
 
 # --- Завершение ---
