@@ -29,6 +29,8 @@ INSTALL_GROUPS=()
 INSTALL_R7_REPO=0
 INSTALL_R7_RELEASE=0
 INSTALL_MAX_REPO=0
+INSTALL_CRYPTOPRO=0
+INSTALL_RUTOKEN=0
 PACKAGE_INSTALL_FAILURES=()
 declare -a DESKTOP_PACKAGE_IDS=()
 SUDO_KEEPALIVE_PID=""
@@ -121,6 +123,8 @@ usage() {
   --r7-office                Установить R7 Office через репозиторий
   --r7-office-release        Установить R7 Office из GitHub Releases без обращения к репозиторию
   --max                      Установить MAX через репозиторий
+  --cryptopro                Установить КриптоПро CSP 5 и CAdES-плагины из релиза
+  --rutoken                  Установить драйверы и плагины Рутокен из релиза
   -h, --help                 Показать эту справку
 
 Примеры:
@@ -188,6 +192,8 @@ print_package_list() {
   - R7 Office (--r7-office)
   - R7 Office из GitHub Releases (--r7-office-release)
   - MAX (--max)
+  - КриптоПро CSP 5 и CAdES-плагины (--cryptopro)
+  - Драйверы и плагины Рутокен (--rutoken)
 EOF
 }
 
@@ -356,6 +362,83 @@ USER_SCRIPT
     done
 }
 
+install_cryptopro_archive() {
+    local archive="$1"
+    local extract_dir content_dir manifest entry package_file package_id
+    local -a csp_base_packages=()
+
+    extract_dir=$(mktemp -d "$DEB_DOWNLOAD_DIR/cryptopro.XXXXXX") || {
+        echo "Ошибка: не удалось создать временный каталог для распаковки КриптоПро." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (распаковка)")
+        return 1
+    }
+    content_dir="$extract_dir/content"
+    if ! mkdir -p -- "$content_dir"; then
+        echo "Ошибка: не удалось подготовить каталог для распаковки КриптоПро." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (распаковка)")
+        return 1
+    fi
+    manifest="$extract_dir/archive-files.txt"
+    if ! tar -tzf "$archive" > "$manifest"; then
+        echo "Ошибка: архив КриптоПро не читается: $archive." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (архив)")
+        return 1
+    fi
+    while IFS= read -r entry; do
+        if [[ "$entry" == /* || "/$entry/" == *"/../"* ]]; then
+            echo "Ошибка: архив КриптоПро содержит недопустимый путь: $entry." >&2
+            PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (путь в архиве)")
+            return 1
+        fi
+    done < "$manifest"
+    if ! tar -xzf "$archive" --no-same-owner -C "$content_dir"; then
+        echo "Ошибка: не удалось распаковать архив КриптоПро." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (распаковка)")
+        return 1
+    fi
+
+    while IFS= read -r -d '' package_file; do
+        csp_base_packages+=("$package_file")
+    done < <(find "$content_dir" -type f \( \
+        -name 'cprocsp-curl*' \
+        -o -name 'lsb-cprocsp-base*' \
+        -o -name 'lsb-cprocsp-capilite*' \
+        -o -name 'lsb-cprocsp-kc1-64*' \
+        -o -name 'lsb-cprocsp-rdr-64*' \
+        -o -name 'cprocsp-rdr-gui-gtk*' \
+        -o -name 'cprocsp-rdr-rutoken*' \
+        -o -name 'cprocsp-rdr-pcsc*' \
+        -o -name 'lsb-cprocsp-pkcs11*' \
+        -o -name 'cprocsp-rdr-cryptoki*' \
+        -o -name 'cprocsp-cptools-gtk*' \
+        -o -name 'lsb-cprocsp-ca-certs*' \
+        -o -name 'lsb-cprocsp-import-ca-certs*' \
+    \) -print0)
+    if [[ ${#csp_base_packages[@]} -eq 0 ]]; then
+        echo "Ошибка: в архиве не найдены пакеты CSP из набора КриптоПро для Astra/Debian." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (пакеты не найдены)")
+        return 1
+    fi
+
+    echo "Установка базовых пакетов КриптоПро CSP 5..."
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get -f -y install "${csp_base_packages[@]}"; then
+        echo "Ошибка: не удалось установить базовые пакеты КриптоПро CSP 5." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (базовые пакеты)")
+        return 1
+    fi
+    for package_file in "${csp_base_packages[@]}"; do
+        if package_id=$(dpkg-deb -f "$package_file" Package 2>/dev/null); then
+            DESKTOP_PACKAGE_IDS+=("$package_id")
+        fi
+    done
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y pcsc-tools; then
+        echo "Ошибка: не удалось установить pcsc-tools, необходимые для работы с токенами." >&2
+        PACKAGE_INSTALL_FAILURES+=("КриптоПро CSP 5 (pcsc-tools)")
+        return 1
+    fi
+    return 0
+}
+
 # === ОСНОВНОЙ СЦЕНАРИЙ: АРГУМЕНТЫ И ОПРЕДЕЛЕНИЕ ОС ===
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -415,6 +498,14 @@ while [[ $# -gt 0 ]]; do
             INSTALL_MAX_REPO=1
             shift
             ;;
+        --cryptopro)
+            INSTALL_CRYPTOPRO=1
+            shift
+            ;;
+        --rutoken)
+            INSTALL_RUTOKEN=1
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -447,7 +538,7 @@ case "$ASTRA_VERSION" in
         ;;
 esac
 
-if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || $UPGRADE_OS -eq 1 || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_R7_RELEASE:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" ]]; then
+if [[ ${#INSTALL_GROUPS[@]} -gt 0 || -n "$REPO_BRANCH" || $UPGRADE_OS -eq 1 || "${INSTALL_R7_REPO:-0}" == "1" || "${INSTALL_R7_RELEASE:-0}" == "1" || "${INSTALL_MAX_REPO:-0}" == "1" || "$INSTALL_CRYPTOPRO" == "1" || "$INSTALL_RUTOKEN" == "1" ]]; then
     AUTO_MODE=1
 fi
 if [[ "$INSTALL_R7_RELEASE" == "1" ]]; then
@@ -818,6 +909,12 @@ declare -A PACKAGE_NAMES=(
     [python-3.15]="Python 3.15.0"
     [obs]="OBS Studio"
     [kumir]="КуМир 2"
+    [cryptopro-archive]="КриптоПро CSP 5 (архив)"
+    [cryptopro-pki-plugin]="КриптоПро CAdES browser plugin"
+    [cryptopro-pki-cades]="КриптоПро CAdES"
+    [rutoken-pkcs11]="Рутокен PKCS#11"
+    [rutoken-browser-plugin]="Рутокен browser plugin"
+    [rutoken-ifd]="Драйвер смарт-карт Рутокен"
 )
 declare -A PACKAGE_URLS=(
     [foxit]="${GITHUB_RELEASE_BASE_URL}foxitreader.deb"
@@ -842,6 +939,12 @@ declare -A PACKAGE_URLS=(
     [python-3.15]="${GITHUB_RELEASE_BASE_URL}python-3.15.0-alse1.8-amd64.deb"
     [obs]="${GITHUB_RELEASE_BASE_URL}obs-studio.deb"
     [kumir]="${GITHUB_RELEASE_BASE_URL}kumir2.deb"
+    [cryptopro-archive]="${GITHUB_RELEASE_BASE_URL}linux-amd64_deb.tgz"
+    [cryptopro-pki-plugin]="${GITHUB_RELEASE_BASE_URL}cprocsp-pki-plugin-64_2.0.15820-1_amd64.deb"
+    [cryptopro-pki-cades]="${GITHUB_RELEASE_BASE_URL}cprocsp-pki-cades-64_2.0.15820-1_amd64.deb"
+    [rutoken-pkcs11]="${GITHUB_RELEASE_BASE_URL}librtpkcs11ecp_2.22.1.0-1_amd64.deb"
+    [rutoken-browser-plugin]="${GITHUB_RELEASE_BASE_URL}libnpRutokenPlugin_4.13.0-1_amd64.deb"
+    [rutoken-ifd]="${GITHUB_RELEASE_BASE_URL}ifd-rutokens_1.0.4_amd64.deb"
 )
 add_group_apt() {
     local package="$1"
@@ -870,6 +973,20 @@ add_group_package() {
     done
     URLS_TO_DOWNLOAD+=("$url")
     NAMES_TO_DOWNLOAD+=("$name")
+}
+
+select_cryptopro() {
+    INSTALL_CRYPTOPRO=1
+    add_group_package cryptopro-archive
+    add_group_package cryptopro-pki-plugin
+    add_group_package cryptopro-pki-cades
+}
+
+select_rutoken() {
+    INSTALL_RUTOKEN=1
+    add_group_package rutoken-pkcs11
+    add_group_package rutoken-browser-plugin
+    add_group_package rutoken-ifd
 }
 
 # === ФУНКЦИИ ВЫБОРА ПАКЕТОВ ===
@@ -1026,6 +1143,12 @@ if [[ $AUTO_MODE -eq 1 ]]; then
     if [[ "$INSTALL_R7_RELEASE" == "1" ]]; then
         add_group_package r7-office
     fi
+    if [[ "$INSTALL_CRYPTOPRO" == "1" ]]; then
+        select_cryptopro
+    fi
+    if [[ "$INSTALL_RUTOKEN" == "1" ]]; then
+        select_rutoken
+    fi
     if [[ ${#INSTALL_GROUPS[@]} -eq 0 \
         && ${#URLS_TO_DOWNLOAD[@]} -eq 0 \
         && ${#APT_PACKAGES_TO_INSTALL[@]} -eq 0 \
@@ -1065,6 +1188,14 @@ else
     echo ""
     echo "=== РАЗДЕЛ 3: СПЕЦИАЛЬНЫЕ ПАКЕТЫ ==="
     ask_python
+    read -r -p "Установить КриптоПро CSP 5 и CAdES-плагины? (y/n): " cryptopro_ans
+    if [[ "$cryptopro_ans" =~ ^[YyДд]$ ]]; then
+        select_cryptopro
+    fi
+    read -r -p "Установить драйверы и плагины Рутокен? (y/n): " rutoken_ans
+    if [[ "$rutoken_ans" =~ ^[YyДд]$ ]]; then
+        select_rutoken
+    fi
 fi
 
 echo ""
@@ -1205,13 +1336,20 @@ is_valid_cached_deb() {
     local expected_checksum="$2"
     [[ -s "$package_file" ]] \
         && printf '%s  %s\n' "$expected_checksum" "$package_file" | sha256sum --check --status \
-        && dpkg-deb --info "$package_file" >/dev/null 2>&1
+        && {
+            if [[ "$package_file" == *.tgz ]]; then
+                tar -tzf "$package_file" >/dev/null 2>&1
+            else
+                dpkg-deb --info "$package_file" >/dev/null 2>&1
+            fi
+        }
 }
 
 declare -a DEB_FILES_TO_INSTALL=()
 declare -a DEB_NAMES_TO_INSTALL=()
+declare -a ARCHIVE_FILES_TO_INSTALL=()
 echo "Постоянный кэш пакетов: $DEB_DOWNLOAD_DIR"
-echo "Загрузка выбранных .deb пакетов..."
+echo "Загрузка выбранных пакетов..."
 for i in "${!URLS_TO_DOWNLOAD[@]}"; do
     package_name="${NAMES_TO_DOWNLOAD[$i]}"
     package_url="${URLS_TO_DOWNLOAD[$i]}"
@@ -1288,7 +1426,13 @@ for i in "${!URLS_TO_DOWNLOAD[@]}"; do
         echo "Загрузка: $package_name..."
         if ! wget --no-check-certificate "$package_url" -O "$download_tmp" \
             -q --show-progress --progress=bar:force:noscroll \
-            || ! dpkg-deb --info "$download_tmp" >/dev/null 2>&1 \
+            || ! {
+                if [[ "$download_tmp" == *.tgz ]]; then
+                    tar -tzf "$download_tmp" >/dev/null 2>&1
+                else
+                    dpkg-deb --info "$download_tmp" >/dev/null 2>&1
+                fi
+            } \
             || ! mv -- "$download_tmp" "$package_file"; then
             echo "ОШИБКА: не удалось получить корректный пакет «$package_name»; пакет пропущен." >&2
             rm -f -- "$download_tmp"
@@ -1296,8 +1440,12 @@ for i in "${!URLS_TO_DOWNLOAD[@]}"; do
             continue
         fi
     fi
-    DEB_FILES_TO_INSTALL+=("$package_file")
-    DEB_NAMES_TO_INSTALL+=("$package_name")
+    if [[ "$package_file" == *.tgz ]]; then
+        ARCHIVE_FILES_TO_INSTALL+=("$package_file")
+    else
+        DEB_FILES_TO_INSTALL+=("$package_file")
+        DEB_NAMES_TO_INSTALL+=("$package_name")
+    fi
 done
 
 declare -a VALID_DEB_FILES=()
@@ -1313,6 +1461,12 @@ for i in "${!DEB_FILES_TO_INSTALL[@]}"; do
 done
 DEB_FILES_TO_INSTALL=("${VALID_DEB_FILES[@]}")
 DEB_NAMES_TO_INSTALL=("${VALID_DEB_NAMES[@]}")
+
+for archive_file in "${ARCHIVE_FILES_TO_INSTALL[@]}"; do
+    if ! install_cryptopro_archive "$archive_file"; then
+        echo "Предупреждение: установка базовой части КриптоПро не выполнена." >&2
+    fi
+done
 
 declare -a INSTALLABLE_DEB_FILES=()
 declare -a INSTALLABLE_DEB_NAMES=()
