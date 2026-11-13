@@ -1331,13 +1331,14 @@ if [[ -n "$DOWNLOAD_OWNER_UID" ]]; then
     fi
 fi
 
-is_valid_cached_deb() {
+is_valid_cached_package() {
     local package_file="$1"
     local expected_checksum="$2"
+    local package_format="$3"
     [[ -s "$package_file" ]] \
         && printf '%s  %s\n' "$expected_checksum" "$package_file" | sha256sum --check --status \
         && {
-            if [[ "$package_file" == *.tgz ]]; then
+            if [[ "$package_format" == "tgz" ]]; then
                 tar -tzf "$package_file" >/dev/null 2>&1
             else
                 dpkg-deb --info "$package_file" >/dev/null 2>&1
@@ -1356,6 +1357,10 @@ for i in "${!URLS_TO_DOWNLOAD[@]}"; do
     filename=$(basename "$package_url" | sed 's/.*file=\(.*\.deb\).*/\1/')
     if [[ "$filename" == *"raw"* ]] || [[ -z "$filename" ]]; then
         filename="package_${i}.deb"
+    fi
+    package_format="deb"
+    if [[ "$filename" == *.tgz ]]; then
+        package_format="tgz"
     fi
 
     package_file="$DEB_DOWNLOAD_DIR/$filename"
@@ -1377,13 +1382,14 @@ for i in "${!URLS_TO_DOWNLOAD[@]}"; do
             continue
         fi
 
-        if is_valid_cached_deb "$package_file" "$expected_checksum"; then
+        if is_valid_cached_package "$package_file" "$expected_checksum" "$package_format"; then
             echo "Пакет уже есть в кэше, контрольная сумма проверена: $package_name"
         else
             rm -f -- "$package_file"
             reused_legacy=0
             for legacy_file in "$PWD"/tmp_deb.*/"$filename"; do
-                if [[ -f "$legacy_file" ]] && is_valid_cached_deb "$legacy_file" "$expected_checksum"; then
+                if [[ -f "$legacy_file" ]] \
+                    && is_valid_cached_package "$legacy_file" "$expected_checksum" "$package_format"; then
                     if ! ln -- "$legacy_file" "$package_file" 2>/dev/null; then
                         cp -p -- "$legacy_file" "$download_tmp" && mv -- "$download_tmp" "$package_file" || continue
                     fi
@@ -1402,7 +1408,7 @@ for i in "${!URLS_TO_DOWNLOAD[@]}"; do
                     PACKAGE_INSTALL_FAILURES+=("$package_name")
                     continue
                 fi
-                if ! is_valid_cached_deb "$download_tmp" "$expected_checksum"; then
+                if ! is_valid_cached_package "$download_tmp" "$expected_checksum" "$package_format"; then
                     echo "ОШИБКА: пакет «$package_name» повреждён или не прошёл SHA-256; пакет пропущен." >&2
                     rm -f -- "$download_tmp"
                     PACKAGE_INSTALL_FAILURES+=("$package_name")
@@ -1427,7 +1433,7 @@ for i in "${!URLS_TO_DOWNLOAD[@]}"; do
         if ! wget --no-check-certificate "$package_url" -O "$download_tmp" \
             -q --show-progress --progress=bar:force:noscroll \
             || ! {
-                if [[ "$download_tmp" == *.tgz ]]; then
+                if [[ "$package_format" == "tgz" ]]; then
                     tar -tzf "$download_tmp" >/dev/null 2>&1
                 else
                     dpkg-deb --info "$download_tmp" >/dev/null 2>&1
