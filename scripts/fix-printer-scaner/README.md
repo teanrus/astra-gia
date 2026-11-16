@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-ALSE_1.8-0066CC?style=for-the-badge)](https://astralinux.ru/products/special-edition/)
-[![Context](https://img.shields.io/badge/Context-ГИА-1E3A8A?style=for-the-badge)](https://astralinux.ru/education/)
+[![Context](https://img.shields.io/badge/Context-ГИА-1E3A8A?style=for-the-badge)](https://astra.ru/training/schoolchildren/final-exam/?ysclid=mv4uyuv9e0662256639)
 [![Components](https://img.shields.io/badge/Components-SANE_and_CUPS-333333?style=for-the-badge)](https://ru.wikipedia.org/wiki/CUPS)
 [![Content](https://img.shields.io/badge/Content-Shell_Scripts-4EAA25?style=for-the-badge)](https://www.gnu.org/software/bash/)
 
